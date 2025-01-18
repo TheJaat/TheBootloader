@@ -28,7 +28,7 @@ TheBootloader is a simple 16-bit x86 bootloader written in assembly, designed to
 ### Build Steps:
 1. Clone the repository:
    ```bash
-   git clone <repository_url>
+   git clone https://github.com/TheJaat/TheBootloader
    cd TheBootloader
    ```
 3. Build the binary using the Makefile:
