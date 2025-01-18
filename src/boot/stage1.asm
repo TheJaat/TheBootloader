@@ -8,7 +8,8 @@ jmp main_gate
 ; Entry point of the bootloader
 main_gate:
 
-    mov si, welcome_string
+    ;; Print the stage1 welcome message
+    mov si, welcome_stage1_str
     call Print_String16
 
     ; Infinite loop to prevent execution from continuing into unknown memory
@@ -16,8 +17,13 @@ hang:
     jmp hang            ; Loop forever
 
 
+
+
+
 ; data section
-welcome_string: db "Welcome to stage 1", 0
+welcome_stage1_str: db "Welcome to stage 1", 0
+
+
 
 ; Padding to ensure the bootloader is 512 bytes (required by BIOS)
 padding:
