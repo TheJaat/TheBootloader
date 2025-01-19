@@ -63,20 +63,29 @@ FixCS:
     call PrintNewline	; \n
     call PrintWordDecimal    ; Print ax value in number
     call PrintNewline	; \n
-    
+    ;; ******************************************
 
     ;; ******************************************
-    ;; Calculate and print the actual code size of stage1
-    ;; The actual code without padding, from start to the 
-    ;; right before the ending times statement.
-
     ;; Calculate and print the actual code size without padding
     ;; of stage1 right from the start to the before the ending statement.
+    ;; ------------------------------------------
     mov ax, actual_code_end - main_gate
     mov si, sActualStage1SizeStatement
     call Print_String16
     call PrintWordDecimal
     call PrintNewline
+    ;; ******************************************
+
+    ;; ******************************************
+    ;; Calculate and print the padded code size of stage1
+    ;; The padded code is with padding, from start to the very
+    ;; ending after the times statement.
+    mov ax, stage1_end - main_gate
+    mov si, sPaddedStage1SizeStatement
+    call Print_String16
+    call PrintWordDecimal
+    call PrintNewline
+    ;; ******************************************
 
     ; Infinite loop to prevent execution from continuing into unknown memory
 hang:
@@ -93,6 +102,7 @@ bPhysicalDriveNum db 0	; Variable to store disk number
 
 welcome_stage1_str: db "Welcome to stage 1", 0
 sActualStage1SizeStatement: db 'Actual size of the stage1 code (without padding in bytes): ', 0
+sPaddedStage1SizeStatement: db "Padded size of the stage1 code (with padding in bytes): ", 0
 
 ;; Actual code end flag
 actual_code_end:    ; After this there is padding only
@@ -103,3 +113,5 @@ padding:
 
 ; Boot signature (mandatory for BIOS to recognize this as a valid bootloader)
 boot_signature dw 0xAA55 ; Signature value at the end of the 512-byte sector
+
+stage1_end:    ; Padded code ended
