@@ -58,14 +58,33 @@ ClearScreenAndResetCursor:
     int 0x10            ; Call BIOS interrupt
 	
     ; Reset cursor position to the top-left corner
-    mov ah, 0x02        ; BIOS function: Set cursor position
-    mov bh, 0x00        ; Page number (0)
     mov dh, 0x00        ; Row (0)
     mov dl, 0x00        ; Column (0)
-    int 0x10            ; Call BIOS interrupt
+    call SetCursorPosition  ; Call the function which sets the cursor at particular position.
 
     popa        ; Restore all general-purpose registers
 ret             ; Return to the caller
 ;; ******************************************
+
+
+;; ******************************************
+;; SetCursorPosition
+;; Moves the cursor to the specified row and column
+;;
+;; Inputs:
+;;       DH - Row (0 - 24).
+;;       DL - Column (0 - 79).
+;; Outputs:
+;;        Moves the cursor to the specified position.
+;; Clobbers:
+;;         AH, BH (used for BIOS calls).
+;; ------------------------------------------
+SetCursorPosition
+    mov ah, 0x02        ; BIOS function: Set cursor position
+    mov bh, 0x00        ; Page number (0)
+    int 0x10            ; Call BIOS interrupt
+    ret
+;; ******************************************
+
 
 %endif
