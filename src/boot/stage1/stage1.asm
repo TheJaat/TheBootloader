@@ -48,8 +48,25 @@ FixCS:
                                       ; cursor at the top left corner
 
     ;; Print the stage1 welcome message
-    mov si, welcome_stage1_str
-    call Print_String16
+    mov si, welcome_stage1_str    ; Load the address of the string into si register
+    call Print_String16           ; Print the string pointed by si
+    call PrintNewline     ; \n
+
+
+    ;; ******************************************
+    ;; Debugging Purpose
+    ;; ------------------------------------------
+    ;; Print the Register value in hex and decimal
+    mov ax, 1234
+    mov dx, ax
+    call PrintWordHex    ; Print dx value in hex
+    
+
+    ;; ******************************************
+    ;; Calculate and print the actual code size of stage1
+    ;; The actual code without padding, from start to the 
+    ;; right before the ending times statement.
+
 
     ; Infinite loop to prevent execution from continuing into unknown memory
 hang:
