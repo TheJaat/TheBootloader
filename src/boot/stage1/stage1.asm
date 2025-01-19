@@ -3,7 +3,7 @@ ORG 0x7c00              ; Set the origin to 0x7C00, where the BIOS loads the boo
 
 jmp main_gate
 
-%include "../../headers/boot/print16.inc"
+%include "utils16/print16.inc"
 
 ; Entry point of the bootloader
 main_gate:

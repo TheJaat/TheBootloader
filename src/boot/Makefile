@@ -1,23 +1,27 @@
 # Makefile for src/boot
 
-ASM = nasm
-ASFLAGS = -f bin
-OUTPUT_DIR = ../../build
-TARGET = $(OUTPUT_DIR)/stage1.bin
-
-SRC = stage1.asm
-
 .PHONY: all clean
 
-# Target to build the bootloader binary
-all: $(TARGET)
+# Ensure ROOT_DIR is set, defaulting to one level up if not provided
+ROOT_DIR ?= $(abspath ..)
 
-$(TARGET): $(SRC)
-	@mkdir -p $(OUTPUT_DIR)
-	$(ASM) $(ASFLAGS) $(SRC) -o $(TARGET)
+# Include the configuration file
+include $(ROOT_DIR)/config.mk
 
-# Target to clean the output
+# Define Build Directory
+Build_DIR = $(ROOT_DIR)/build
+
+# Subdirectory
+SUBDIRS = stage1
+
+# Target to build everything
+all:
+	@for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir ROOT_DIR=$(ROOT_DIR) || exit 1; \
+	done
+
+# Target to clean everything
 clean:
-	@rm -f $(TARGET)
-	@rmdir --ignore-fail-on-non-empty $(OUTPUT_DIR)
-
+	@for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean || exit 1; \
+	done
