@@ -60,6 +60,9 @@ FixCS:
     mov ax, 1234
     mov dx, ax
     call PrintWordHex    ; Print dx value in hex
+    call PrintNewline	; \n
+    call PrintWordDecimal    ; Print ax value in number
+    call PrintNewline	; \n
     
 
     ;; ******************************************
@@ -67,6 +70,13 @@ FixCS:
     ;; The actual code without padding, from start to the 
     ;; right before the ending times statement.
 
+    ;; Calculate and print the actual code size without padding
+    ;; of stage1 right from the start to the before the ending statement.
+    mov ax, actual_code_end - main_gate
+    mov si, sActualStage1SizeStatement
+    call Print_String16
+    call PrintWordDecimal
+    call PrintNewline
 
     ; Infinite loop to prevent execution from continuing into unknown memory
 hang:
@@ -82,8 +92,10 @@ hang:
 bPhysicalDriveNum db 0	; Variable to store disk number
 
 welcome_stage1_str: db "Welcome to stage 1", 0
+sActualStage1SizeStatement: db 'Actual size of the stage1 code (without padding in bytes): ', 0
 
-
+;; Actual code end flag
+actual_code_end:    ; After this there is padding only
 
 ; Padding to ensure the bootloader is 512 bytes (required by BIOS)
 padding:

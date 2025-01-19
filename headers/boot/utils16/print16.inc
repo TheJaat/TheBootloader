@@ -33,6 +33,34 @@ ret
 
 
 ;; ******************************************
+;; PrintChar16BIOS
+;; This function prints the char on the screen stored in AL register using the BIOS interrupts.
+;; IN:
+;;    - AL: Char
+;; OUT:
+;;     Print the char in the screen
+;; Clobbers:
+;;         - AX, BX
+;; -----------------------------------------
+PrintChar16BIOS:
+    ; Save the state of AX and BX registers
+    push ax
+    push bx
+
+    ; Setup for BIOS teletype output (INT 0x10, AH = 0x0E)
+    mov ah, 0x0E               ; BIOS teletype function (TTY output)
+    mov bl, byte [bTextColor]  ; Load the text color into BL
+    mov bh, 0x00               ; Set the page number to 0 (usually not needed for TTY output)
+    int 0x10                   ; BIOS video interrupt to print the character in AL
+
+    ; Restore the state of BX and AX registers
+    pop bx
+    pop ax
+ret             ; Return from the PrintChar16BIOS routine
+;; ******************************************
+
+
+;; ******************************************
 ;; Print_String16
 ;; Prints a null-terminated string on the screen at the
 ;; current cursor position.
@@ -143,21 +171,77 @@ PrintWordHex:
                                   ; into position
         loop .hex_loop            ; Decrement CX and repeat for the next nibble
 
-        mov si, hexString         ; Load the address of the hex string
-        mov ah, 0Eh               ; BIOS function to print a character
-        mov cx, 6                 ; Length of string (4 hex digits + optional prefix 0x)
-        .loop:
-            lodsb                 ; Load the next byte from [SI] into AL
-            int 10h		  ; BIOS interrupt to print the character in AL
+    mov si, hexString         ; Load the address of the hex string
+    mov ah, 0Eh               ; BIOS function to print a character
+    mov cx, 6                 ; Length of string (4 hex digits + optional prefix 0x)
+    .loop:
+        lodsb                 ; Load the next byte from [SI] into AL
+        int 10h		  ; BIOS interrupt to print the character in AL
         loop .loop                ; Decrement CX and repeat until all characters are printed
-        popa           ; Restore the state of all general purpose registers
+    popa           ; Restore the state of all general purpose registers
 ret
 ;; ******************************************
 
 
 ;; ******************************************
+;; PrintWordDecimal
+;; IN:
+;;    - AX: NumberToPrint
+;; OUT:
+;;     Prints the Value in Decimal
+;; Clobbers:
+;;          All general-purpose registers (saved/restored
+;;          using pusha/popa).
+; -------------------------------------------
+PrintWordDecimal:
+    ; Save all general-purpose registers
+    pushad
+
+    ; Initialize variables
+    xor bx, bx        ; Clear BX to use it as a counter for the number of digits
+    mov cx, 10         ; Set CX to 10, the divisor for converting number to digits
+
+    .DigitLoop:
+    xor dx, dx        ; Clear DX before division
+    div cx             ; Divide AX by 10
+
+    ; After div: AX contains quotient, DX contains remainder
+
+    ; Convert remainder to ASCII
+    add dx, 48         ; Convert digit to ASCII ('0' = 48)
+
+    ; Store ASCII digit on the stack
+    push dx
+
+    inc bx             ; Increment digit count
+
+    ; If quotient (EAX) is zero, we're done converting digits
+    cmp ax, 0
+    jnz .DigitLoop       ; If EAX is not zero, repeat the loop
+
+    .PrintLoop:
+    ; Pop ASCII digit from stack into EAX
+    pop ax
+
+    ; Print the character in EAX
+    call PrintChar16BIOS
+
+    ; Decrease digit count in EBX
+    dec bx
+    jnz .PrintLoop     ; If EBX is not zero, print next digit
+
+    ; Restore all general-purpose registers
+    popad
+ret          ; Return from the PrintWordDecimal routine
+;; ******************************************
+
+
+;; ******************************************
 ;; Member Variables
+;; b - byte sized variable
 ;; ------------------------------------------
+
+bTextColor    db    0x0F
 
 hexString:    db '0x0000'
 hexToASCII:   db '0123456789ABCDEF'
