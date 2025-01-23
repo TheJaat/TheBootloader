@@ -15,9 +15,6 @@ stage2:
 jmp $
 
 
-
-
-
 ;; Data
 welcome_stage2_str: db "Welcome to stage 2", 0
 

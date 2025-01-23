@@ -6,6 +6,7 @@ main_gate:
 jmp main
 
 ;; Include files
+%include "stage1_strings.inc"
 %include "utils16/print16.inc"
 
 ; Entry point of the bootloader
@@ -48,7 +49,7 @@ FixCS:
                                       ; cursor at the top left corner
 
     ;; Print the stage1 welcome message
-    mov si, welcome_stage1_str    ; Load the address of the string into si register
+    mov si, Stage1WelcomeMessage    ; Load the address of the string into si register
     call Print_String16           ; Print the string pointed by si
     call PrintNewline     ; \n
 
@@ -70,7 +71,7 @@ FixCS:
     ;; of stage1 right from the start to the before the ending statement.
     ;; ------------------------------------------
     mov ax, actual_code_end - main_gate
-    mov si, sActualStage1SizeStatement
+    mov si, Stage1ActualSizeMessage
     call Print_String16
     call PrintWordDecimal
     call PrintNewline
@@ -81,7 +82,7 @@ FixCS:
     ;; The padded code is with padding, from start to the very
     ;; ending after the times statement.
     mov ax, stage1_end - main_gate
-    mov si, sPaddedStage1SizeStatement
+    mov si, Stage1PaddedSizeMessage
     call Print_String16
     call PrintWordDecimal
     call PrintNewline
@@ -109,7 +110,7 @@ hang:
 
 disk_reading_error:
     ; Display error message
-    mov si, error_msg
+    mov si, DiskReadErrorMessage
     call Print_String16
     jmp $
 
@@ -118,11 +119,6 @@ disk_reading_error:
 ;; ******************************************
 
 bPhysicalDriveNum db 0	; Variable to store disk number
-
-welcome_stage1_str: db "Welcome to stage 1", 0
-sActualStage1SizeStatement: db 'Actual size of the stage1 code (without padding in bytes): ', 0
-sPaddedStage1SizeStatement: db "Padded size of the stage1 code (with padding in bytes): ", 0
-error_msg: db "Disk read error!", 0
 
 ;; Actual code end flag
 actual_code_end:    ; After this there is padding only
