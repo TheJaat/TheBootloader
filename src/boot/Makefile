@@ -17,7 +17,11 @@ SUBDIRS = stage1 stage2
 # Target to build everything
 all:
 	@for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir ROOT_DIR=$(ROOT_DIR) || exit 1; \
+		echo "$(MAGENTA)Entering Directory $$dir...$(RESET)";\
+		$(MAKE) -C $$dir ROOT_DIR=$(ROOT_DIR) || { \
+			echo "$(RED)Error: Make failed in $$dir!$(RESET)"; \
+			exit 1; \
+		} \
 	done
 
 # Target to clean everything

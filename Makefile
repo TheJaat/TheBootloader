@@ -26,7 +26,11 @@ all:
 	@mkdir -p build
 
 	@for dir in $(SUBDIRS); do \
-		$(MAKE) -C  $$dir ROOT_DIR=$(ROOT_DIR); \
+		echo "$(MAGENTA)Entering Directory $$dir...$(RESET)";\
+		$(MAKE) -C $$dir ROOT_DIR=$(ROOT_DIR) || { \
+			echo "$(RED)Error: Make failed in $$dir!$(RESET)"; \
+			exit 1; \
+		} \
 	done
 
 $(DISK_IMG):

@@ -21,17 +21,19 @@ BIN = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.bin, $(SRC))
 # Target to build all binaries
 all: $(BIN)
 
-# Rule to create the stage1 directory if it doesn't exist
+# Rule to create the stage2 directory if it doesn't exist
 $(STAGE2_DIR):
+	@echo "$(CYAN)Creating stage2 directory...$(RESET)"
 	mkdir -p $(STAGE2_DIR)
 
 # Rule to build each binary
 $(STAGE2_DIR)/%.bin: $(SRC_DIR)/%.asm | $(STAGE2_DIR) 
-	echo "Assembling $< to $@"
+	@echo "$(GREEN)Assembling $< to $@...$(RESET)"
 	$(ASM) $(ASFLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE1_INCLUDE) $< -o $@
 
 # Target to clean the output
 clean:
-	# TODO: Clean stage1 directory and other outputs
+	# Clean stage2 directory and other outputs
+	@echo -e "$(YELLOW)Cleaning up the build directory...$(RESET)"
 	rm -rf $(STAGE2_DIR)
 

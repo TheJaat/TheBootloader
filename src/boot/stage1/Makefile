@@ -23,15 +23,17 @@ all: $(BIN)
 
 # Rule to create the stage1 directory if it doesn't exist
 $(STAGE1_DIR):
+	@echo "$(CYAN)Creating stage1 directory...$(RESET)"
 	mkdir -p $(STAGE1_DIR)
 
 # Rule to build each binary
 $(STAGE1_DIR)/%.bin: $(SRC_DIR)/%.asm | $(STAGE1_DIR) 
-	echo "Assembling $< to $@"
+	@echo "$(GREEN)Assembling $< to $@...$(RESET)"
 	$(ASM) $(ASFLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE1_INCLUDE) $< -o $@
 
 # Target to clean the output
 clean:
 	# TODO: Clean stage1 directory and other outputs
+	@echo "$(YELLOW)Cleaning up the build directory...$(RESET)"
 	rm -rf $(STAGE1_DIR)
 
