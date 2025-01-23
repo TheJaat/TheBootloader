@@ -87,12 +87,31 @@ FixCS:
     call PrintNewline
     ;; ******************************************
 
+
+    ;; Reading Stage from disk to memory
+    mov ah, 0x02                 ; BIOS Function: Read sectors
+    mov al, 2                    ; Number of sectors to read  (stage 2 size)
+    mov ch, 0                    ; Cylinder 0
+    mov cl, 2                    ; Start at sector 2 (after the stage1 boot code)
+    mov dh, 0                    ; Head 0
+    mov dl, [bPhysicalDriveNum]  ; Disk number
+    mov bx, 0x0500               ; Load stage 2 at address 0x0500
+    int 0x13                     ; BIOS disk interrupt
+    jc disk_reading_error        ; Jump if carry flag is set, means error
+
+
+    ;; Far jump to stage2
+    jmp 0x0000:0x0500
+
     ; Infinite loop to prevent execution from continuing into unknown memory
 hang:
     jmp hang            ; Loop forever
 
-
-
+disk_reading_error:
+    ; Display error message
+    mov si, error_msg
+    call Print_String16
+    jmp $
 
 ;; ******************************************
 ;; data section
@@ -103,6 +122,7 @@ bPhysicalDriveNum db 0	; Variable to store disk number
 welcome_stage1_str: db "Welcome to stage 1", 0
 sActualStage1SizeStatement: db 'Actual size of the stage1 code (without padding in bytes): ', 0
 sPaddedStage1SizeStatement: db "Padded size of the stage1 code (with padding in bytes): ", 0
+error_msg: db "Disk read error!", 0
 
 ;; Actual code end flag
 actual_code_end:    ; After this there is padding only

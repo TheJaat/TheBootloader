@@ -12,7 +12,7 @@ include $(ROOT_DIR)/config.mk
 Build_DIR = $(ROOT_DIR)/build
 
 # Subdirectory
-SUBDIRS = stage1
+SUBDIRS = stage1 stage2
 
 # Target to build everything
 all:

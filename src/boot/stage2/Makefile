@@ -1,4 +1,4 @@
-# Makefile for src/boot/stage1
+# Makefile for src/boot/stage2
 
 .PHONY: all clean
 
@@ -10,28 +10,28 @@ include $(ROOT_DIR)/config.mk
 
 # Define Build Directory
 BUILD_DIR = $(ROOT_DIR)/build
-STAGE1_DIR = $(BUILD_DIR)/stage1
+STAGE2_DIR = $(BUILD_DIR)/stage2
 
 SRC_DIR = .
 SRC = $(wildcard $(SRC_DIR)/*.asm)  # Finds all .asm files in the current directory
-OBJ = $(patsubst $(SRC_DIR)/%.asm, $(STAGE1_DIR)/%.o, $(SRC))
-BIN = $(patsubst $(SRC_DIR)/%.asm, $(STAGE1_DIR)/%.bin, $(SRC))
+OBJ = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.o, $(SRC))
+BIN = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.bin, $(SRC))
 
 
 # Target to build all binaries
 all: $(BIN)
 
 # Rule to create the stage1 directory if it doesn't exist
-$(STAGE1_DIR):
-	mkdir -p $(STAGE1_DIR)
+$(STAGE2_DIR):
+	mkdir -p $(STAGE2_DIR)
 
 # Rule to build each binary
-$(STAGE1_DIR)/%.bin: $(SRC_DIR)/%.asm | $(STAGE1_DIR) 
+$(STAGE2_DIR)/%.bin: $(SRC_DIR)/%.asm | $(STAGE2_DIR) 
 	echo "Assembling $< to $@"
 	$(ASM) $(ASFLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE1_INCLUDE) $< -o $@
 
 # Target to clean the output
 clean:
 	# TODO: Clean stage1 directory and other outputs
-	rm -rf $(STAGE1_DIR)
+	rm -rf $(STAGE2_DIR)
 
