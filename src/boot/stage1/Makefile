@@ -29,7 +29,7 @@ $(STAGE1_DIR):
 # Rule to build each binary
 $(STAGE1_DIR)/%.bin: $(SRC_DIR)/%.asm | $(STAGE1_DIR) 
 	@echo "$(GREEN)Assembling $< to $@...$(RESET)"
-	$(ASM) $(ASFLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE1_INCLUDE) $< -o $@
+	$(ASM) $(STAGE1_ASFLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE1_INCLUDE) -I $(ROOT_DIR)/$(BOOT_COMMON_INCLUDE) $< -o $@
 
 # Target to clean the output
 clean:

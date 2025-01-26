@@ -20,8 +20,11 @@ STAGE2_BIN = $(STAGE2_DIR)/stage2.bin
 DISK_IMG := $(BUILD_DIR)/disk.img
 DISK_SIZE := 1440  # Disk size in KB
 
+ISO_DIR = iso
+ISO_IMG = $(BUILD_DIR)/image.iso
+
 # Target to build everything
-all:
+all: 
 	# Create the build directory
 	@mkdir -p build
 
@@ -42,10 +45,22 @@ $(DISK_IMG):
 	# Copy the stage2 binary to the disk starting at sector 2
 	dd if=$(STAGE2_BIN) of=$(DISK_IMG) bs=512 seek=1 conv=notrunc
 
-run: $(DISK_IMG)
-	qemu-system-x86_64 -drive format=raw,file=$(DISK_IMG)
+$(ISO_IMG): 
+	@echo "$(GREEN)Creating ISO image...$(RESET)"
+	mkdir -p $(ISO_DIR)/
+	mkdir -p $(ISO_DIR)/boot
+	mkdir -p $(ISO_DIR)/kernel
+	mkdir -p $(ISO_DIR)/saample
+	cp $(STAGE1_BIN) $(ISO_DIR)/
+
+	xorriso -as mkisofs -R -J -b stage1.bin -iso-level 3 -no-emul-boot -boot-load-size 4 -o $@ $(ISO_DIR)
+
+
+run: $(ISO_IMG)
+	qemu-system-x86_64 -m 512M -cdrom $(ISO_IMG)
 
 # Target to clean everything
 clean:
 	# $(MAKE) -C src clean
+	rm -rf $(ISO_DIR)
 	@rm -rf $(BUILD_DIR)

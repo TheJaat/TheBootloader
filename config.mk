@@ -1,13 +1,25 @@
 # Compiler and tools
 ASM = nasm
 LD = ld
+CC = gcc
 
 # Flags
-ASFLAGS = -f bin
+STAGE1_ASFLAGS = -f bin
+STAGE2_ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386
 
-# Header includes
-BOOT_STAGE1_INCLUDE = headers/boot/
+# GCC
+GCC_FLAGS = -m32 -fno-pie -ffreestanding -nostdlib
+
+## Header includes
+# Common
+BOOT_COMMON_INCLUDE = headers/boot/
+# Stage1
+BOOT_STAGE1_INCLUDE = headers/boot/stage1/
+# Stage2
+BOOT_STAGE2_ASM_INCLUDE = headers/boot/stage2/asm_includes/
+BOOT_STAGE2_C_INCLUDE = headers/boot/stage2/c_includes/
+BOOT_STAGE2_C_STD_INCLUDE = headers/boot/stage2/c_includes/std/
 
 # Common Directories
 OUTPUT_DIR = ../../build
