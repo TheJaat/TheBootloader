@@ -200,7 +200,7 @@ FixCS:
 	
 	; push ax		; Push AX, which is 107 on the stack
 	
-	; mov ax, 108	; Change AX to 108
+	; mov ax, 108	        ; Change AX to 108
 	; call PrintWordNumber	; Print Changed value
 	; Call PrintNewline	; \n
 	
