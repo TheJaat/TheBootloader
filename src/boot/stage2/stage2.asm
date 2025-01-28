@@ -51,7 +51,7 @@ stage2_entry:
 	mov si, WelcomeToStage2		; Print Stage 2 Welcome message
 	call PrintString16BIOS
 	call PrintNewline		; \n
-jmp $
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; Wait for the Keyboard Key Press
 ;	call GetKeyInputWithBIOS
