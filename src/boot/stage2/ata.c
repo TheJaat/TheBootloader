@@ -604,6 +604,7 @@ int load_kernel_from_iso9660_using_atapi(const char* kernel_name)
 		}
 		boot_print("Kernel was loaded successfully.\n");
 
+
 		// Below snippet is for calling the loaded kernel using c code.
 		// uint32_t kernel_address = 0x300000;
 		// void (*kernel_entry)(void) = (void(*)(void))0x300000;

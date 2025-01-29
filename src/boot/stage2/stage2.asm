@@ -327,10 +327,9 @@ Temp32Bit:
 					; if 0 - failure
 					; if 1 - success
 	jne elf_reading_loading_error
-
 	;; loading successful
 
-	;; Get the kernle load address from the g_kernelAddress variable declared and assigned value in elf.c
+	;; Get the kernel load address from the g_kernelAddress variable declared and assigned value in elf.c
 	;; After retrieving the kernel load address store it in the OsBootDescriptor Structure, which is to be
 	;; passed to kernel.
 	mov dword  eax, [g_kernelAddress]
@@ -367,7 +366,6 @@ PrepareToJumpToReal:
 ;	mov eax, MULTIBOOT_MAGIC
 ;	mov ebx, BootHeader
 ;	mov edx, BootDescriptor
-
 
 ;	jmp 0x1000000	; Jump to the location, where kernel elf sections are loaded.
 
@@ -461,7 +459,7 @@ Temp16Bit:
 	sti
 
 	; Switch Video Mode
-	 call 	VesaFinish
+;	 call 	VesaFinish
 
 	; Goto Permanent Protected Mode!
 	mov		eax, cr0
