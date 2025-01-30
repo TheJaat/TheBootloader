@@ -39,7 +39,7 @@ $(STAGE2_DIR)/%.o: $(SRC_DIR)/%.asm | $(STAGE2_DIR)
 # Rule to compile .c files to .o
 $(STAGE2_DIR)/%.elf: $(SRC_DIR)/%.c | $(STAGE2_DIR)
 	@echo "$(BLUE)Compiling $< to $@...$(RESET)"
-	$(CC) $(GCC_FLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE2_C_INCLUDE) -I $(ROOT_DIR)/$(BOOT_STAGE2_C_STD_INCLUDE) -c $< -o $@
+	$(CC) $(GCC_FLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE2_C_INCLUDE) -I $(ROOT_DIR)/$(BOOT_STAGE2_C_STD_INCLUDE) -I $(ROOT_DIR)/$(HEADERS) -c $< -o $@
 
 # Rule to link all object files into the final binary
 $(BIN): $(OBJ)

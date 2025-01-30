@@ -1,6 +1,6 @@
 # Root Makefile
 
-.PHONY: all run clean
+.PHONY: all tools run clean
 
 # Subdirectories
 SUBDIRS = src
@@ -56,6 +56,17 @@ $(ISO_IMG):
 
 	xorriso -as mkisofs -R -J -b stage1.bin -iso-level 3 -no-emul-boot -boot-load-size 4 -o $@ $(ISO_DIR)
 
+tools:
+	@echo "$(GREEN)Building tools...$(RESET)"
+	$(MAKE) -C tools ROOT_DIR=$(ROOT_DIR)
+
+# Run revision tool with parameters
+## make run-revision ARGS="build gcc" // for increasing build version
+## make run-revision ARGS="major gcc"
+## make run-revision ARGS="minor gcc"
+run-revision:
+	@echo "$(CYAN)Running revision tool...$(RESET)"
+	$(BUILD_DIR)/tools/revision/revision $(ARGS)
 
 run: $(ISO_IMG)
 	qemu-system-x86_64 -m 512M -cdrom $(ISO_IMG)

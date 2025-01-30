@@ -21,6 +21,10 @@ BOOT_STAGE2_ASM_INCLUDE = headers/boot/stage2/asm_includes/
 BOOT_STAGE2_C_INCLUDE = headers/boot/stage2/c_includes/
 BOOT_STAGE2_C_STD_INCLUDE = headers/boot/stage2/c_includes/std/
 
+# Header directory
+HEADERS = headers/
+
+
 # Common Directories
 OUTPUT_DIR = ../../build
 

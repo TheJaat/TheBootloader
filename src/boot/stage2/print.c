@@ -1,5 +1,6 @@
 #include <print.h>
 #include <port_io.h>
+#include <revision.h>  // for build information
 
 
 #define SCREEN_WIDTH 80		// Mode 3 Screen Width | Column
@@ -130,12 +131,65 @@ void boot_ushort_print_hex(unsigned short value) {
 }
 
 
+void boot_print_int(int value) {
+    char buffer[12]; // Enough for an int (including sign and null terminator)
+    int i = 10;
+    buffer[11] = '\0';
+
+    if (value == 0) {
+        boot_print("0");
+        return;
+    }
+
+    int isNegative = (value < 0);
+    if (isNegative) {
+        value = -value;
+    }
+
+    while (value > 0 && i > 0) {
+        buffer[i--] = (value % 10) + '0';
+        value /= 10;
+    }
+
+    if (isNegative) {
+        buffer[i--] = '-';
+    }
+
+    boot_print(&buffer[i + 1]);
+}
+
+
 void init_print_stage2() {
 
-	set_attribute(BG_LIGHT_GRAY, FG_MAGENTA);
-	boot_clear_screen();
+    set_attribute(BG_LIGHT_GRAY, FG_MAGENTA);
+    boot_clear_screen();
 
-	boot_print("Welcome to the console.\n");
+    boot_print("Welcome to the console.\n");
+    boot_print("");
+
+// Print Build Information:
+    boot_print("\nBuild Information:\n");
+    boot_print("Date: ");
+    boot_print(BUILD_DATE);
+    boot_print("\n");
+
+    boot_print("Time: ");
+    boot_print(BUILD_TIME);
+    boot_print("\n");
+
+    boot_print("System: ");
+    boot_print(BUILD_SYSTEM);
+    boot_print("\n");
+
+    boot_print("Version: ");
+    boot_print_int(REVISION_MAJOR);
+    boot_print(".");
+    boot_print_int(REVISION_MINOR);
+    boot_print(".");
+    boot_print_int(REVISION_BUILD);
+    boot_print("\n");
+    while(1){}
+
 /*	boot_print("\n");
 
 	boot_print("second line.");
@@ -146,4 +200,3 @@ void init_print_stage2() {
 	}
 */
 }
-
