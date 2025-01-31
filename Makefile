@@ -1,6 +1,6 @@
 # Root Makefile
 
-.PHONY: all tools run clean
+.PHONY: all tools run clean run-revision
 
 # Subdirectories
 SUBDIRS = src
@@ -24,7 +24,7 @@ ISO_DIR = iso
 ISO_IMG = $(BUILD_DIR)/image.iso
 
 # Target to build everything
-all: 
+all: tools increase-build
 	# Create the build directory
 	@mkdir -p build
 
@@ -59,6 +59,11 @@ $(ISO_IMG):
 tools:
 	@echo "$(GREEN)Building tools...$(RESET)"
 	$(MAKE) -C tools ROOT_DIR=$(ROOT_DIR)
+
+# Just increment the build version in every build
+increase-build:
+	@echo "$(CYAN)Incrementing build version...$(RESET)"
+	$(BUILD_DIR)/tools/revision/revision build gcc
 
 # Run revision tool with parameters
 ## make run-revision ARGS="build gcc" // for increasing build version
