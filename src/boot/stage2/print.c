@@ -188,7 +188,7 @@ void init_print_stage2() {
     boot_print(".");
     boot_print_int(REVISION_BUILD);
     boot_print("\n");
-    while(1){}
+
 
 /*	boot_print("\n");
 
