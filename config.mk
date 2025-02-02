@@ -8,6 +8,9 @@ STAGE1_ASFLAGS = -f bin
 STAGE2_ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386
 
+# Assembly defines
+ARCH = 32
+
 # GCC
 GCC_FLAGS = -m32 -fno-pie -ffreestanding -nostdlib
 

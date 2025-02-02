@@ -72,8 +72,16 @@ FixCS:
 
 	; Save the DL register value, which contains the disk number 
 	mov 	byte [bPhysicalDriveNum], dl
-
 	call ClearScreenAndResetCursor	; Clear the screen and reset the cursor
+
+    ;; Get the ARCH flag from the -d compile time flag (symbol)
+    %if ARCH == 32
+        mov byte [Architecture], 32
+    %elif ARCH == 64
+        mov byte [Architecture], 64
+    %else
+        %error "Unsupported hardware"
+    %endif
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; Debuggin Purpose
@@ -264,6 +272,7 @@ Stage2FileIdentifierLength equ $ - Stage2FileIdentifier - 1	; -1 is for the null
 ; Now we are in ISO 9660, so its sector size is 2048 bytes (2KB)
 ;times 2048 - ($ - $$) db 0
 
+Architecture: db 0
 
 
 PrimaryVolumeDescriptor:
