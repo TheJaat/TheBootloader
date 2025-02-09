@@ -315,19 +315,19 @@ Find_and_Load_File_from_Root:
 
 	; Save File Data Length in local variable
 	xor eax, eax
-	mov byte ax, es:[si+ 10]	; Data length of the file in LSB
+	mov dword eax, es:[si+ 10]	; Data length of the file in LSB
 				; It is present at offset 10 of Directory Entry Record.
 				; It is of 4 byte in size
 				; and data length is in bytes.
 	mov dword [bp - 12], eax
 
 	;; Prints the Data length
-	; push si
-	; mov si, sLengthOfFile
-	; call PrintString16BIOS
-	; call PrintWordNumber
-	; call PrintNewline
-	; pop si
+;	 push si
+;	 mov si, sLengthOfFile
+;	 call PrintString16BIOS
+;	 call PrintWordNumber
+;	 call PrintNewline
+;	 pop si
 
 	;; Update the es and bx for the segment and offset of the file loading area
 	;	from the local variable.

@@ -24,8 +24,8 @@ jmp main
 ; 0x000C8000 - 0x000EFFFF	160 KB BIOS Expansion
 ; 0x000F0000 - 0x000FFFFF	64 KB Motherboard BIOS
 
-%define STAGE2_AREA_SEGMENT	0x0000
-%define STAGE2_AREA_OFFSET	0x0500
+%define STAGE2_AREA_SEGMENT	0x0CC0
+%define STAGE2_AREA_OFFSET	0x0000;0x0500
 
 %define SUBSYSTEM_MEM_SEGEMENT 0x8000
 %define SUBSYSTEM_MEM_OFFSET 0x00
@@ -216,7 +216,7 @@ FixCS:
 	
 	;; Here we have passed the value 107 and 108 in the stack,
 	;; such that stack is:
-	;;	|	| Top (Low Memory Area)
+	;;	|	    | Top (Low Memory Area)
 	;;	|  108	|
 	;;	|-------|
 	;;	|  107	| Bottom (High Memory Area)

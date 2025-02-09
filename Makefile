@@ -53,6 +53,9 @@ $(ISO_IMG):
 	mkdir -p $(ISO_DIR)/saample
 	cp $(STAGE1_BIN) $(ISO_DIR)/
 	cp $(STAGE2_BIN) $(ISO_DIR)/
+	cp kernel.elf $(ISO_DIR)/
+	cp abc.txt $(ISO_DIR)/
+	cp random.txt $(ISO_DIR)/saample/
 
 	xorriso -as mkisofs -R -J -b stage1.bin -iso-level 3 -no-emul-boot -boot-load-size 4 -o $@ $(ISO_DIR)
 

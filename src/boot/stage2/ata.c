@@ -5,6 +5,8 @@
 #include <ISO9660.h>
 #include <constants.h>
 
+#include <vfs.h>
+
 /*
 * This global variable stores the kernel size,
 * It is used in stage2.asm as an external.
@@ -387,13 +389,86 @@ int find_and_load_kernel_from_9660_using_atapi(const char* kernel_name)
 	return 0;		// return false
 }
 
+// int check_and_set_atapi_device()
+// {
+// 	boot_print("[ATA] check_and_set_atapi_device, setting ATAPI disk\n");
+// 	int status = 0;    // false
+// 	if (check_for_atapi(&ata_primary_master) == 1)
+// 	{
+// 		status = 1;
+// 	}
+// 	if (check_for_atapi(&ata_primary_slave) == 1)
+// 	{
+// 		return 1;
+// 	}
+
+// 	if (check_for_atapi(&ata_secondary_master) == 1)
+// 	{
+// 		return 1;
+// 	}
+// 	if (check_for_atapi(&ata_secondary_slave) == 1)
+// 	{
+// 		return 1;
+// 	}
+
+// 	// Didn't found the ATAPI device
+// 	return 0;
+// }
+
+int check_and_set_atapi_device() {
+    boot_print("[ATA] Scanning for ATAPI devices...\n");
+
+	// Use an array of pointers instead of an array of variables
+    struct ata_device *ata_devices[] = {
+        &ata_primary_master,
+        &ata_primary_slave,
+        &ata_secondary_master,
+        &ata_secondary_slave
+    };
+
+    for (size_t i = 0; i < sizeof(ata_devices) / sizeof(ata_devices[0]); i++) {
+		if(!ata_devices[i]->is_atapi){
+			;continue;
+		}
+        if (check_for_atapi(ata_devices[i]) == 1) {
+            boot_print("[ATA] ATAPI device detected.\n");
+            return 1;  // Found and set an ATAPI device
+        }
+    }
+
+    boot_print("[ATA] No valid ATAPI device found.\n");
+    return 0;  // No ATAPI device detected
+}
+
+int check_for_atapi(struct ata_device *_device)
+{
+	if (device->is_atapi)
+	{
+		// Store the current device in the global variable
+		device = _device;
+		boot_print("sector size = "); boot_print_hex(device->atapi_sector_size); boot_print("\n");
+
+		// Check for the ATAPI device sector size, it should be 2048 = 0x800
+		if (device->atapi_sector_size != 2048)
+		{
+			boot_print_hex(device->atapi_sector_size);
+			boot_print("\n - bad sector size\n");
+			return 0; // return false
+		}
+		return 1; // return true
+	}
+	return 0; // return false
+}
 
 // Find and load the Kernel, helper function
 int check_and_load_kernel(struct ata_device *device, const char* kernel_name) {
     if (device->is_atapi) {
-        int status = read_atapi_device(device);
+        int status = check_for_atapi(device);//read_atapi_device(device);
+		boot_print("Preparing to initialize VFS\n");
+init_vfs();
         if (status) {
-            return load_kernel_from_iso9660_using_atapi(kernel_name);
+			return status;
+            // return load_kernel_from_iso9660_using_atapi(kernel_name);
         }
     }
 	return 0;		// return false
@@ -414,13 +489,14 @@ void restore_root(void) {
 
 int _read_12 = 0;
 void ata_device_read_sector_atapi(struct ata_device * dev, uint32_t lba, uint8_t * buf) {
-
+boot_print("[ATA] ata_device_read_sector_atapi: Reading\n"); boot_print_hex(lba); boot_print("\n");
 	if (!dev->is_atapi) return;
 
 
 	uint16_t bus = dev->io_base;
 
 _try_again:
+boot_print("[ATA] ata_device_read_sector_atapi: trying\n");
 	outb(dev->io_base + ATA_REG_HDDEVSEL, 0xA0 | dev->slave << 4);
 	ata_io_wait(dev);
 
@@ -474,21 +550,20 @@ _try_again:
 	return;
 
 atapi_error_on_read_setup:
-	boot_print("error on setup\n");
+	boot_print("[ATA] ata_device_read_sector_atapi: Error on setup\n");
 	return;
 atapi_error_on_read_setup_cmd:
 	if (_read_12) {
 		_read_12 = 0;
-		boot_print("trying again\n");
+		boot_print("Trying again\n");
 		goto _try_again;
 	}
-	boot_print("error on cmd\n");
+	boot_print("[ATA] ata_device_read_sector_atapi: Error on cmd\n");
 	return;
 }
 
 
 void ata_read_sectors(struct ata_device *dev, unsigned int lba, int sector_count, unsigned short* buffer) {
-
 	// Select the drive and LBA mode
 	outb(dev->io_base + ATA_REG_HDDEVSEL, 0xE0 | (dev->slave << 4) | ((lba >> 24) & 0x0F));
 	ata_io_wait(dev);
@@ -512,6 +587,12 @@ void ata_read_sectors(struct ata_device *dev, unsigned int lba, int sector_count
 			((unsigned short *)buffer)[(sector*256) + i] = inw(dev->io_base + ATA_REG_DATA);
 		}
 	}
+}
+
+int read_sector(unsigned int lba, unsigned char* buffer) {
+    boot_print("[ATA] Reading Sector\n");
+    ata_device_read_sector_atapi(device, lba, buffer);
+    return 0;
 }
 
 /*
@@ -549,7 +630,7 @@ void ata_read_sector() {
 
 // Read the atapi device, Validate its PVD (Primary Volume Descriptor)
 int read_atapi_device(struct ata_device * _device) {
-
+//boot_print("Read ATAPI Device");
 	// Store the current device in the global variable
 	device = _device;
 
@@ -557,27 +638,30 @@ int read_atapi_device(struct ata_device * _device) {
 	if (device->atapi_sector_size != 2048) {
 		boot_print_hex(device->atapi_sector_size);
 		boot_print("\n - bad sector size\n");
-		return	0;		// return false
+		return	0;                        // return false
 	}
+boot_print("Preparing to initialize VFS\n");
+init_vfs();
+
 
 	// Read volume descriptors of ISO9660
 	// start from LBA 16 which is block 16 (0-indexed)
-	for (int i = 0x10; i < 0x15; ++i) {
+//	for (int i = 0x10; i < 0x15; ++i) {
 		// Read this block
-		ata_device_read_sector_atapi(device, i, (uint8_t *)root);
+//		ata_device_read_sector_atapi(device, i, (uint8_t *)root);
 
 		// Check for the descriptor type
-		switch (root->type) {
-			case 1:	// Its Primary Volume Descriptor
-				root_sector = i;
-				goto done;
-			case 0xFF:	// its the Volume Set Termination Descriptor that is the end of the descriptors.
-				return 0;	// return false
-		}
-	}
-	return 0;	// return false
-done:
-	restore_root();
+//		switch (root->type) {
+//			case 1:	// Its Primary Volume Descriptor
+//				root_sector = i;
+//				goto done;
+//			case 0xFF:	// its the Volume Set Termination Descriptor that is the end of the descriptors.
+//				return 0;	// return false
+//		}
+//	}
+//	return 0;	// return false
+//done:
+//	restore_root();
 	return 1;	// return true
 }
 

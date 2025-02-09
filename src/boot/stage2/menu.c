@@ -10,7 +10,7 @@ static next_free_byte = 0;
 
 typedef unsigned int size_t;
 
-void* stage2_malloc(size_t size) {
+void* menu_malloc(size_t size) {
 	if(next_free_byte + size > MEMORY_POOL_SIZE) {
 		return (void*)0;
 	}
@@ -24,7 +24,7 @@ void* stage2_malloc(size_t size) {
 
 Menu* Menu_Create(menu_type type, const char* title) {
 
-	Menu* menu = (Menu*) stage2_malloc(sizeof(Menu));
+	Menu* menu = (Menu*) menu_malloc(sizeof(Menu));
 
 	// Initialization
 	menu->type = type;
@@ -37,7 +37,7 @@ Menu* Menu_Create(menu_type type, const char* title) {
 	menu->isHidden = 1;
 	
 	if(title != (void*)0) {
-		menu->title = (char*)stage2_malloc(strlen(title) + 1);
+		menu->title = (char*)menu_malloc(strlen(title) + 1);
 		for (int i = 0; i<= strlen(title); i++) {
 			menu->title[i] = title[i];
 		}
@@ -78,7 +78,7 @@ int strlen(const char* str) {
 }
 
 MenuItem* MenuItem_Create(const char* label, Menu* subMenu) {
-	MenuItem* item = (MenuItem*) stage2_malloc(sizeof(MenuItem));
+	MenuItem* item = (MenuItem*) menu_malloc(sizeof(MenuItem));
 
 	// Initialization
 	item->type = MENU_ITEM_STANDARD;
@@ -90,7 +90,7 @@ MenuItem* MenuItem_Create(const char* label, Menu* subMenu) {
 	item->target = (void*)0;
 
 	int length = strlen(label) + 1;
-	char *duplicate = (char*)stage2_malloc(length);
+	char *duplicate = (char*)menu_malloc(length);
 	for(int i = 0; i < length; i++){
 	
 		duplicate[i] = label[i];
@@ -122,7 +122,7 @@ void Menu_AddItem(Menu* menu, MenuItem* item) {
 
 
 void Menu_AddSeparatorItem(Menu* menu) {
-	MenuItem* item = (MenuItem*) stage2_malloc(sizeof(MenuItem));
+	MenuItem* item = (MenuItem*) menu_malloc(sizeof(MenuItem));
 
 	// TODO, check if it is not null
 

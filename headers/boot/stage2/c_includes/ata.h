@@ -47,7 +47,8 @@ typedef union {
 
 
 // Declaration of functions
-void ata_read_sector();
+int ata_read_sector();
 
+int read_sector(unsigned int lba, unsigned char* buffer);
 
 #endif // _ATA_IO_H

@@ -45,8 +45,8 @@ BITS 32  ;; 32 Bit Mode
 ;   - [EBP + 12] = Starting sector LBA
 ; ******************************** 
 ata_read_sector_primary_master:
-			; Stack Grows Higher to Lower Memory)
-			; |	    | Higher Memory Address
+			; Stack Grows Higher to Lower Memory
+			; |	        | Higher Memory Address
 			; |---------| --> Stack Bottom | Base Pointer
 			; | sector  |
 			; | starting|
@@ -60,8 +60,8 @@ ata_read_sector_primary_master:
 			; |	    |	Lower Memory Address
 ; Create Stack Frame
 	push ebp
-			; Stack Grows Higher to Lower Memory)
-			; |	    | Higher Memory Address
+			; Stack Grows Higher to Lower Memory
+			; |	        | Higher Memory Address
 			; |---------| --> Stack Bottom | Base Pointer
 			; | sector  |
 			; | starting|
@@ -79,8 +79,8 @@ ata_read_sector_primary_master:
 
 	mov ebp, esp	; Point base pointer to the stack pointer
 
-			; Stack Grows Higher to Lower Memory)
-			; |	    | Higher Memory Address
+			; Stack Grows Higher to Lower Memory
+			; |	        | Higher Memory Address
 			; |---------| --> Stack Bottom
 			; | sector  |
 			; | starting|
@@ -386,7 +386,7 @@ copy_and_swap_bytes:
     loop .copy_loop
 ret
 
-section .data
+;section .data
 
 identifier_data dw 256 dup(0)	; Buffer to store identification data (512 bytes)
 serial_number db 20 dup(0)      ; Buffer to store the serial number
