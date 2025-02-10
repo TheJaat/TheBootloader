@@ -12,7 +12,8 @@
 * It is used in stage2.asm as an external.
 * It's value then stored in OsBootDescriptor structure.
 */
-int g_kernelSize;
+// moved to vfs.c
+// int g_kernelSize;
 
 #define ATA_SR_BSY     0x80
 #define ATA_SR_DRDY    0x40
@@ -680,7 +681,8 @@ int load_kernel_from_iso9660_using_atapi(const char* kernel_name)
 		boot_print("Kernel Size (in bytes, hex)= "); boot_print_hex(searched_file_dir_entry->extent_length_LSB); boot_print("\n");
 
 		// Store the kernel size in global variable which would be access in stage2.asm
-		g_kernelSize = searched_file_dir_entry->extent_length_LSB;
+		// moved to vfs.c
+		// g_kernelSize = searched_file_dir_entry->extent_length_LSB;
 
 		long offset = 0;
 		for (int i = searched_file_dir_entry->extent_start_LSB; i < searched_file_dir_entry->extent_start_LSB + searched_file_dir_entry->extent_length_LSB / 2048 + 1; ++i, offset += 2048) {

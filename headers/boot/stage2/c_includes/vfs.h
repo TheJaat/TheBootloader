@@ -18,6 +18,6 @@ typedef struct {
 
 void init_vfs();
 
-void load_kernel();
+int load_kernel(const char* kernel_name);
 
 #endif //  _VFS_H_

@@ -53,7 +53,7 @@ $(ISO_IMG):
 	mkdir -p $(ISO_DIR)/saample
 	cp $(STAGE1_BIN) $(ISO_DIR)/
 	cp $(STAGE2_BIN) $(ISO_DIR)/
-	cp kernel.elf $(ISO_DIR)/
+	cp kernel.elf $(ISO_DIR)/kernel/
 	cp abc.txt $(ISO_DIR)/
 	cp random.txt $(ISO_DIR)/saample/
 

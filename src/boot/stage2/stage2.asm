@@ -212,25 +212,21 @@ Temp32Bit:
     jne NoATAPIDevice
 
     call init_vfs    ; Initialize the Virtual FileSystem
-    call load_kernel
-    jmp next
-jmp $
 
-temp:
     push kernel_name    ; Push the address of the kernel name string onto the stack
-    call find_and_load_kernel_from_9660_using_atapi
-    add esp, 4          ; Clean up the stack, as its the caller'r responsibility
-jmp $
+    call load_kernel
+    add esp, 4          ; Clean up the stack, as its the caller's responsibility
     ;; Return:
     ;;        - 1: Success, Kernel was found and loaded.
     ;;        - 0: Failure, Kernel either not found or not loaded.
     cmp eax, 1               ; Success kernel was found and loaded
     jne ErrorLoadingKernel   ; Display error string of kernel loading failure
 
-next:
+    ;; Here, kernel was loaded successfully
 
+    ;; -------------------------------------------------------------------
     ;; Get the kernel size from the g_kernelSize variable declared and
-    ;; assigned value in ata.c
+    ;; assigned value in vfs.c
     ;; After retrieving the kernel size store it in the OsBootDescriptor
     ;; Structure, which is to be passed to kernel.
     mov dword eax, [g_kernelSize]
@@ -253,7 +249,7 @@ next:
     ;;      - if 1 - success
     jne ELFParseLoadingError
     ;; loading successful
-jmp $
+
     ;; Get the kernel load address from the g_kernelAddress variable
     ;; declared and assigned value in elf.c
     ;; After retrieving the kernel load address store it in the
