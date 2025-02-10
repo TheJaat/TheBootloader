@@ -61,9 +61,18 @@ int iso9660_mount()
         return -1;
     }
 
+// The root directory record is stored in pvd->root (34 bytes)
+// Cast it to a proper directory entry structure pointer.
+iso_9660_directory_entry_t *root_entry = (iso_9660_directory_entry_t *)pvd->root;
+
+// Step 3: Extract the Root Directory Record Information
+// Use the little-endian values from the root directory record
+iso_fs.root_dir_sector = root_entry->extent_start_LSB;
+iso_fs.root_dir_size = root_entry->extent_length_LSB;
+
     // Step 3: Extract Root Directory Record (at offset 156 in PVD)
-    iso_fs.root_dir_sector = *(unsigned int *)(pvd->root + 2);
-    iso_fs.root_dir_size = *(unsigned int *)(pvd->root + 10);
+   // iso_fs.root_dir_sector = *(unsigned int *)(pvd->root + 2);
+  //  iso_fs.root_dir_size = *(unsigned int *)(pvd->root + 10);
 
     // Read Successfully
     // Copy the RootDirectory Entry to the location 0x20800
