@@ -131,6 +131,7 @@ BITS 32
     extern check_and_set_atapi_device
 
     extern init_vfs
+    extern load_kernel
 
     extern find_and_load_kernel_from_9660_using_atapi
     extern jump_to_kernel
@@ -211,6 +212,8 @@ Temp32Bit:
     jne NoATAPIDevice
 
     call init_vfs    ; Initialize the Virtual FileSystem
+    call load_kernel
+    jmp next
 jmp $
 
 temp:
@@ -224,6 +227,7 @@ jmp $
     cmp eax, 1               ; Success kernel was found and loaded
     jne ErrorLoadingKernel   ; Display error string of kernel loading failure
 
+next:
 
     ;; Get the kernel size from the g_kernelSize variable declared and
     ;; assigned value in ata.c
@@ -240,16 +244,16 @@ jmp $
     ; call jump_to_kernel     ; C-way, for jumping to the binary kernel.
 
     ;; -------------------------------------------------------------------
-    ;call load_elf32
+    call load_elf32
     ;; Check the return value
     ;;                       - 1: Success, print success message,
     ;;                       - otherwise: failure
     cmp eax, 1               ; check Return
     ;;      - if 0 - failure
     ;;      - if 1 - success
-    ;jne ELFParseLoadingError
+    jne ELFParseLoadingError
     ;; loading successful
-
+jmp $
     ;; Get the kernel load address from the g_kernelAddress variable
     ;; declared and assigned value in elf.c
     ;; After retrieving the kernel load address store it in the

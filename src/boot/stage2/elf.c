@@ -57,8 +57,8 @@ int load_elf32()
 
 	// In Case just jump to the loaded position of the file implicitly,
 	
-	//void (*entry_point)(void) = (void(*)(void))header->e_entry;
-	//	entry_point();
+	void (*entry_point)(void) = (void(*)(void))header->e_entry;
+		entry_point();
 
 	return 1;	// Return true
 }

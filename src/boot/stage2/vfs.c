@@ -34,3 +34,29 @@ void init_vfs() {
         }
     }
 }
+
+void load_kernel()
+{
+    vfs_node_t *file = vfs_ops.open("KERNEL.ELF");
+    if (!file)
+    {
+        boot_print("Failed to open KERNEL.ELF\n");
+        return;
+    }
+
+    boot_print("Loading KERNEL.ELF at 0x300000\n");
+
+    unsigned char *load_address = (unsigned char *)0x300000;
+    int bytes = vfs_ops.read(file, load_address, file->size, 0);
+
+    if (bytes != file->size)
+    {
+        boot_print("Kernel read failed!\n");
+    }
+    else
+    {
+        boot_print("Kernel loaded successfully!\n");
+        // void (*kernel_entry)() = (void (*)()) 0x300000;
+        // kernel_entry();
+    }
+}
