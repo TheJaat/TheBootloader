@@ -9,24 +9,15 @@ jmp stage2_entry
 ;; No need of ORG directive as we have specified the address in the
 ;; Linker script and we are generating pure binary file from LD linker.
 
-; Memory Map: OLD
-; 0x00000000 - 0x000004FF		Reserved
-; 0x00000500 - 0x00007AFF		Second Stage Bootloader (~29 Kb)
-; 0x00007B00 - 0x00007BFF		Stack Space (256 Bytes)
-; 0x00007C00 - 0x00007DFF		Bootloader (512 Bytes)
-; 0x00007E00 - 0x00008FFF		Used by subsystems in this bootloader
-; 0x00009000 - 0x00009FFF		Memory Map
-; 0x0000A000 - 0x0000AFFF		Vesa Mode Map / Controller Information
-; 0x0000B000 - 0x0007FFFF		File Loading Bay
-
-; Memory Map: NEW
+; Memory Map
 ; 0x00000000 - 0x000003FF	Reserved (1KB), Real Mode IVT (Interrupt Vector Table)
 ; 0x00000400 - 0x000004FF	Reserved (256 bytes), BDA (BIOS Data Area)
-; 0x00000500 - 0x00007AFF	Second Stage Bootloader (~29 Kb)
+; 0x00000500 - 0x00007AFF	Temp Buffer (~29 Kb)
 ; 0x00007B00 - 0x00007BFF	Stack Space (256 Bytes)
 ; 0x00007C00 - 0x0000CBFF	ISO Stage1 Bootloader (20 KiloBytes = 20,480 bytes)
-; 0x0000CC00 - 0x0007FFFF	460 KB, File Loading.
+; 0x0000CC00 - 0x0007FFFF	Second Stage Bootloader, 460 KB.
 ; 0x00080000 - 0x0009FFFF	128 KB, Can be used by subsystems in this bootloader
+                            ; Used by the ISO9660 fs to as a buffer when read.
 			; This memory will be known as the Subsystem memory area
 			; It can be accesses with segment:offset
 			; segment = 0x8000, offset = 0x00
@@ -389,15 +380,38 @@ ProtectedMode:
     ;; -------------------------------------------------------------------
     ;; Clear the screen
     call ClearScreen32
+    ;; -------------------------------------------------------------------
 
+    ;; -------------------------------------------------------------------
+    ;; Print welcome sentence for protected mode
+	mov esi, sProtectedModeWelcomeSentence
+	mov bl, LMAGENTA	; Foreground = Light Magenta
+	mov bh, BLACK		; Background = Black
+	call PrintString32
+    ;; -------------------------------------------------------------------
+
+    ;; -------------------------------------------------------------------
+	;; jmp to the kernel
+	; jmp MEMLOCATION_KERNEL_LOAD_OFFSET
+	xor esi, esi
+	xor edi, edi
+	mov eax, MULTIBOOT_MAGIC
+	mov ebx, BootHeader
+	mov edx, BootDescriptor
+
+	;; Kernel is relocated at 0x100000
+	jmp 0x100000
+    ;; -------------------------------------------------------------------
+
+;; Final Black hole
 jmp $
 
 
 ;times (25*1024) - ($ - $$) db 0
 ;section .data
-; **********
-; Variables
-; **********
+;; ************************************************
+;; Variables
+;; ************************************************
 bPhysicalDriveNum 	db	0
 
 WelcomeToStage2 db 'Welcome to the Stage2', 0
