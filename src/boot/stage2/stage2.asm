@@ -23,6 +23,7 @@ jmp stage2_entry
 			; segment = 0x8000, offset = 0x00
 			; Thus complete address => segement*16 + offset
 			; 0x8000 * 16 + 0 = 0x80000
+            ; 0x9000 is the Memory Map Location
 ; 0x000A0000 - 0x000BFFFF	128 KB, Video Display Memory, reserved
 ; 0x000C0000 - 0x000C7FFF	32 KB, Video BIOS
 ; 0x000C8000 - 0x000EFFFF	160 KB BIOS Expansion
