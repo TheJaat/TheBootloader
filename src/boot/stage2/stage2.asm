@@ -133,10 +133,6 @@ BITS 32
     ;; global variable declared in elf.c and has the elf kernel load address
     extern g_kernelAddress
 
-    ;; Defined in boot_menu.c file
-    extern DrawBootMenu
-
-    extern create_menu
 
 ;; 32-bit includes
     %include "ata.inc"          ; For ATA interface
