@@ -1,12 +1,14 @@
 # Add the cross-compiler's bin directory to the PATH
 # Here, we assume that your toolchain is installed in the same directory as this Makefile's TOOLCHAIN_DIR.
-export TOOLCHAIN_DIR=../toolchain/x86_64
+#export TOOLCHAIN_DIR=../toolchain/x86_64
+export TOOLCHAIN_DIR=../toolchain/i686
 export PATH := $(abspath $(TOOLCHAIN_DIR))/bin:$(PATH)
+
 
 # Compiler and tools
 ASM = nasm
-LD = x86_64-ld #ld
-CC = x86_64-elf-gcc #gcc
+LD = i686-elf-ld #x86_64-ld #ld
+CC = i686-elf-gcc #x86_64-elf-gcc #gcc
 
 # Flags
 STAGE1_ASFLAGS = -f bin

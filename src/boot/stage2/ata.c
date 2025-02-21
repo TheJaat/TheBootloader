@@ -261,6 +261,7 @@ void detect_device_ata_atapi(struct ata_device *dev) {
 		boot_print(ptr);
 		boot_print("\n");
 
+
 		/* Detect medium */
 		atapi_command_t command;
 
