@@ -52,7 +52,7 @@ int load_kernel(const char* kernel_name)
     if (!file)
     {
         boot_print("Failed to open KERNEL/KERNEL.ELF\n");
-        return;
+        return 0;
     }
     // Store the kernel size in global variable which would be access in stage2.asm
 	g_kernelSize = file->size;
