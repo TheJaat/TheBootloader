@@ -23,6 +23,18 @@ void* stage2_malloc(unsigned int size) {
 	return ptr;
 }
 
+void* memcpy(void *dest, const void *src, int n) {
+
+	unsigned char *d = (unsigned char*) dest;
+	const unsigned char *s = (const unsigned char*) src;
+
+	while(n--) {
+		*d++ = *s++;
+	}
+
+	return dest;
+}
+
 /*
  * memcpy
  * Set `count` bytes to `val`.

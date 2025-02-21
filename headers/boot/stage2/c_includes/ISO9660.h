@@ -125,6 +125,7 @@ extern struct ata_device * device;
 
 int navigate_to_file_directory_entry(char * name);
 void traverse_the_disk();
+void traverse(iso_9660_directory_entry_t *dir_entry, const char *path);
 
 
 #endif /* __ISO_9660_H__ */

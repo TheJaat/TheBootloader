@@ -6,6 +6,7 @@
 
 void* stage2_malloc(unsigned int size);
 
+extern void* memcpy(void *dest, const void *src, int n);
 extern void *memcpyb(void *dest, const void *src, size_t n);
 extern void *memsetb(void *dest, int c, int n);
 

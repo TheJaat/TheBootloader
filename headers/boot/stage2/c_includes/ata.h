@@ -50,6 +50,7 @@ typedef union {
 int ata_read_sector();
 int ata_status_wait(struct ata_device * dev, int timeout);
 int check_for_atapi(struct ata_device *_device);
+void ata_device_read_sector_atapi(struct ata_device * dev, uint32_t lba, uint8_t * buf);
 
 int check_and_load_kernel(struct ata_device *device, const char* kernel_name);
 

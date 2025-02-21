@@ -1,4 +1,6 @@
+#include <ata.h>
 #include <ISO9660.h>
+#include <print.h>
 
 int root_sector = 0;
 iso_9660_volume_descriptor_t * root = (iso_9660_volume_descriptor_t *)((uint8_t *)0x20000);
