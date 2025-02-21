@@ -48,6 +48,10 @@ typedef union {
 
 // Declaration of functions
 int ata_read_sector();
+int ata_status_wait(struct ata_device * dev, int timeout);
+int check_for_atapi(struct ata_device *_device);
+
+int check_and_load_kernel(struct ata_device *device, const char* kernel_name);
 
 int read_sector(unsigned int lba, unsigned char* buffer);
 

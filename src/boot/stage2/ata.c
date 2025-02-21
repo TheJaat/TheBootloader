@@ -198,10 +198,10 @@ void detect_device_ata_atapi(struct ata_device *dev) {
 		boot_print_hex(dev->identity.flags);
 		boot_print("\n");
 		boot_print("[ATA] Serial: ");
-		boot_print_hex(dev->identity.serial);
+		boot_print_hex(*(unsigned int *)dev->identity.serial);
 		boot_print("\n");
 		boot_print("[ATA] Firmware Revision: ");
-		boot_print_hex(dev->identity.firmware);
+		boot_print_hex(*(unsigned int *)dev->identity.firmware);
 		boot_print("\n");
 		boot_print("[ATA] Sectors Per Interrupt: ");
 		boot_print_hex(dev->identity.sectors_per_int);
