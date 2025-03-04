@@ -1,6 +1,6 @@
 # TheBootloader
 
-TheBootloader is a simple 16-bit x86 bootloader written in assembly, designed to understand the fundamentals of low-level programming and system bootstrapping.
+TheBootloader is the multi stage bootloader for the TheTaaJ OS.
 
 ---
 
