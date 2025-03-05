@@ -16,7 +16,7 @@ TheBootloader is the multi stage bootloader for the TheTaaJ OS.
    - Load and execute a small kernel or program from disk.
    - Explore file system support.
 
----
+
 
 ## How to Build and Run
 ### Requirements:
