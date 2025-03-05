@@ -2,11 +2,9 @@
 
 TheBootloader is the multi stage bootloader for the TheTaaJ OS.
 
----
 
 ## Current Status
 
----
 
 ## Target
 1. **Short-Term Goals:**
