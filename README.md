@@ -5,6 +5,8 @@ TheBootloader is the multi stage bootloader for the TheTaaJ OS.
 
 ## Current Status
 
+- [x] **Multi-Stage Bootloader:** Two-stages implemented.
+- [x] **File System Support:** ISO9660 FileSystem - Read, Load the Stage2 and Kernel from it.
 
 ## Target
 1. **Short-Term Goals:**
