@@ -18,12 +18,12 @@ jmp stage2_entry
 ; 0x0000CC00 - 0x0007FFFF	Second Stage Bootloader, 460 KB.
 ; 0x00080000 - 0x0009FFFF	128 KB, Can be used by subsystems in this bootloader
                             ; Used by the ISO9660 fs to as a buffer when read.
-			; This memory will be known as the Subsystem memory area
-			; It can be accesses with segment:offset
-			; segment = 0x8000, offset = 0x00
-			; Thus complete address => segement*16 + offset
-			; 0x8000 * 16 + 0 = 0x80000
-            ; 0x9000 is the Memory Map Location
+			                ; This memory will be known as the Subsystem memory area
+			                ; It can be accesses with segment:offset
+			                ; segment = 0x8000, offset = 0x00
+			                ; Thus complete address => segement*16 + offset
+			                ; 0x8000 * 16 + 0 = 0x80000
+                            ; 0x9000 is the Memory Map Location
 ; 0x000A0000 - 0x000BFFFF	128 KB, Video Display Memory, reserved
 ; 0x000C0000 - 0x000C7FFF	32 KB, Video BIOS
 ; 0x000C8000 - 0x000EFFFF	160 KB BIOS Expansion
