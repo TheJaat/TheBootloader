@@ -191,7 +191,7 @@ Temp32Bit:
     ;; (64-bit) systems, the first six integer or pointer arguments are
     ;; passed in registers rdi, rsi, rdx, rcx, r8, and r9.
     ;; Additional arguments are passed on the stack.
-;jmp temp
+
 
     call check_and_set_atapi_device    ; Check for the ATAPI device
     cmp eax, 1                         ; Check if we found the valid ATAPI device
@@ -419,8 +419,8 @@ sBootloaderName	db	"TheTaaJBoot Version 0.0.1, Author: TheJat", 0
 sProtectedModeWelcomeSentence	db	'Entered the Protective Land', 0
 sKernelLoadedSentence	db	'Kernel was Loaded', 0
 module_name db 'MODULE.ELF', 0  ; Define the string with a null terminator
-kernel_name db 'KERNEL/KERNEL.ELF', 0  ; Define the string with a null terminator
-										; Now we are in ISO level 3 which supports upto 31 characters for the file identifier
+kernel_name db 'KERNEL/KERNEL.ELF', 0   ; Define the string with a null terminator
+									    ; Now we are in ISO level 3 which supports upto 31 characters for the file identifier
 										; If again switching back to ISO level 1, which might be the default, if not specified explicitly.
 										; In that case, change the name to 11 characters long, 8 for name and 3 for extension,
 										; separated by the dot (.)
@@ -430,9 +430,9 @@ sKernelELFReadingLoadingFailedSentence db 'Failure in reading and loading kernel
 
 ;times (300*1023 - ($ - $$)) db 0
 very_far:
-mov ah, 0x0e
-mov al, '3'
-int 0x10
+    mov ah, 0x0e
+    mov al, '3'
+    int 0x10
 
 jmp $
 ;times (460 * 1024 - ($ - $$)) db 0 ;; 460 KB
@@ -446,4 +446,3 @@ jmp $
 ;; abnormally then understand the size barrier of stage2 is broken.
 ;; It will work perfectly until the stage 2 code is below 28 KB, It is similar
 ;; to the way if we padded the rest of code with 0.
-
