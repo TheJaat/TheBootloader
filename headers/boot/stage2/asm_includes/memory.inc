@@ -158,7 +158,7 @@ LoadMemoryMap:
 	.MediasRes:
 		; Parse Entry
 		test 	ecx, ecx		; Test if ecx is zero
-		je 		.SkipEntry	; Jump to SkipEntry if ecx is zero
+		je 		.SkipEntry	    ; Jump to SkipEntry if ecx is zero
 		cmp 	cl, 20			; Compare lower byte of ecx with 20
 		jbe 	.Acpi2			; Jump to Acpi2 if cl <= 20
 		test 	byte [es:di + 20], 1	; Test if ACPI attribute bit 0 is set
@@ -176,12 +176,12 @@ LoadMemoryMap:
 
 		; Get higher dword of memory length
 		mov 	ecx, [es:di + 12]	; Get higher dword of memory length
-		test 	ecx, ecx		; Test if ecx is zero
+		test 	ecx, ecx		    ; Test if ecx is zero
 		je 		.SkipEntry
 
 	.GoodEntry:
 		; Increase entry count & move to next
-		inc 	ebp		; Increment ebp (entry count)
+		inc 	ebp	        ; Increment ebp (entry count)
 		add 	edi, 0x20	; Move edi to the next memory map entry (each entry is 32 bytes)
 
 	.SkipEntry:
