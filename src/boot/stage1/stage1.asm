@@ -40,7 +40,7 @@ jmp main
 ;;	mark of the default segment: offset when segment set to 0x00.
 ;;	In order to access the 0x10000, we can set segment (like es) to 0x1000 and
 ;;	offset to 0x00 (like si). Thus es:si = 0x1000:0x0000 = 0x1000*16 + 0x0000
-;;	= 0x10000
+;;	                                                     = 0x10000
 
 ; Includes
 %include "defines.inc"	; For constants and common variables
@@ -62,9 +62,15 @@ FixCS:
 	mov	es, ax
 
 	; Set stack
-	; The sp register is used to point to the top of the stack. By setting sp to 0x7C00, the bootloader ensures that the stack starts at the top of the memory allocated for the bootloader. This is important because the stack grows downward in memory, so it's set up before any other code runs.
+	; The sp register is used to point to the top of the stack.
+	; By setting sp to 0x7C00, the bootloader ensures that the
+	; stack starts at the top of the memory allocated for the
+	; bootloader. This is important because the stack grows
+	; downward in memory, so it's set up before any other code runs.
 	mov	ss, ax
-	mov	ax, 0x7C00	; It ensure that there's space for the stack to grow downward without overlapping with other code or any other data in memory.
+	mov	ax, 0x7C00	; It ensure that there's space for the stack to
+	                ; grow downward without overlapping with other code
+					; or any other data in memory.
 	mov	sp, ax
 
 	; set interrupts
