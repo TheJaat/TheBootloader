@@ -90,7 +90,7 @@ FixCS:
     %endif
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;; Debuggin Purpose
+	;; Debugging Purpose
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; Print the Register value in hex and decimal
 	; mov ax, 1234
@@ -100,7 +100,7 @@ FixCS:
 	; call PrintWordNumber	; Print ax value in number
 	; call PrintNewline	; \n
 
-	;Print Welcome to the Screen
+	; Print Welcome to the Screen
 	mov si, WelcomeToStage1		; Load the address of the string into si register
 	call PrintString16BIOS		; String printing function.
 	call PrintNewline		; \n
@@ -235,8 +235,8 @@ FixCS:
 	;; Pass drive number to stage 2
 	;; we will pass it in register AL, fast and easy
 	;; method for small data
-	xor ax, ax		; for printing clear complete AX
-	mov al, [bPhysicalDriveNum]	; put drive number in al to be passed.
+	xor ax, ax		            ; For printing clear complete AX
+	mov al, [bPhysicalDriveNum]	; Put drive number in al to be passed.
 	mov si, sPassedDriveNumber
 	call PrintString16BIOS
 	call PrintWordNumber	; Print the passing drive number
