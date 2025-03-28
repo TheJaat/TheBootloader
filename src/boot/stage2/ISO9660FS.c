@@ -12,8 +12,6 @@ unsigned char* buffer = (unsigned char*) 0x0500;//0x20000;
 iso_9660_directory_entry_t *root_dir_entry = (iso_9660_directory_entry_t *)((uint8_t *)0x80800);
 unsigned char * root_dir_entries = (unsigned char *)(0x90000);
 
-
-
 int memcmp(const void *s1, const void *s2, int n)
 {
     const unsigned char *p1 = (const unsigned char *)s1;
