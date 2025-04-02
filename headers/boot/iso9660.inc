@@ -2,8 +2,8 @@
 %define __ISO_9660_INC__
 
 ;;%define VOLUME_DESCRIPTOR_READ_LOCATION 0x0500 ; This is for the case when we need to
-					; read the Volume descriptors in memory not in
-					; buffer (fixed size buffer) in the code.
+					                             ; read the Volume descriptors in memory not in
+					                             ; buffer (fixed size buffer) in the code.
 
 ;%define FILE_LOADING_AREA 0xCC00	; It is the file loading area in memory map
 %define ROOT_DIRECTORY_ENTRY_LOCATION 0x90000	; It is the subsystem memory area
