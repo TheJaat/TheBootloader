@@ -1,5 +1,6 @@
 /* Revision Utility
- * Used as a utility to generate a revision and date */
+ * Used as a utility to generate a revision and date
+ */
 
 // Includes
 #include <stdint.h>
@@ -142,7 +143,7 @@ int main(int argc, char *argv[])
 	int revision = 0, minor = 0, major = 0;
 
 	// Print header
-	printf("TheBootloader Versioning Utility\n"
+	printf("TheBootloader Versioning Utility for the TheJat\n"
            "...\n\n");
 
 	// Validate the number of arguments
