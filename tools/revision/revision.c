@@ -1,4 +1,5 @@
-/* Revision Utility
+/*
+ * Revision Utility:
  * Used as a utility to generate a revision and date
  */
 
@@ -196,7 +197,7 @@ SkipParse:
     }
 
 	// Print out header
-	printf("generating revision file...\n");
+	printf("generating bootloader revision file...\n");
 	fprintf(out, "/* Automatically generated revision file, do not change contents.\n");
 	fprintf(out, " * Provides a time, date and description of the current build. */\n");
 	fprintf(out, "#ifndef _REVISION_H_\n");
