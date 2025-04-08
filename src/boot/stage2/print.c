@@ -1,10 +1,10 @@
 #include <print.h>
 #include <port_io.h>
-#include <revision.h>  // for build information
+#include <revision.h>  // For build information
 
 
-#define SCREEN_WIDTH 80		// Mode 3 Screen Width | Column
-#define SCREEN_HEIGHT 25	// Mode 3 Screen Height | Row
+#define SCREEN_WIDTH 80		    // Mode 3 Screen Width | Column
+#define SCREEN_HEIGHT 25	    // Mode 3 Screen Height | Row
 #define VIDEO_MEMORY 0xB8000	// Video Memory in VGA mode
 
 unsigned short *videoMem = (unsigned short*) VIDEO_MEMORY;
