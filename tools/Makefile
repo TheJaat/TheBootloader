@@ -19,13 +19,6 @@ all: revision
 
 # Build the revision tool
 revision:
-	#@for dir in $(SUBDIRS); do\
-	#	echo "$(MAGENTA)Entering Directory $$dir...$(RESET)";\
-	#	$(MAKE) -C $$dir ROOT_DIR=$(ROOT_DIR) || { \
-	#		echo "$(RED)Error: Make failed in $$dir!$(RESET)"; \
-	#		exit 1; \
-	#	} \
-	#done
 	@echo "$(GREEN)Building revision tool...$(RESET)"
 	$(MAKE) -C revision ROOT_DIR=$(ROOT_DIR)
 
