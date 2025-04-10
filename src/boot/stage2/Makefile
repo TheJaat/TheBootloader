@@ -15,9 +15,7 @@ STAGE2_DIR = $(BUILD_DIR)/stage2
 SRC_DIR = .
 ASM_SRC = $(wildcard $(SRC_DIR)/*.asm)    # Finds all .asm files in the current directory
 C_SRC = $(wildcard $(SRC_DIR)/*.c)       # Finds all .c files in the current directory
-# SRC = $(wildcard $(SRC_DIR)/*.asm)  # Finds all .asm files in the current directory
-# OBJ = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.o, $(SRC))
-# BIN = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.bin, $(SRC))
+
 OBJ = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.o, $(ASM_SRC)) \
       $(patsubst $(SRC_DIR)/%.c, $(STAGE2_DIR)/%.elf, $(C_SRC))
 

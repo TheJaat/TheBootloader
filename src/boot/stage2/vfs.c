@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 vfs_operations_t vfs_ops;
+
 /*
 * This global variable stores the kernel size,
 * It is used in stage2.asm as an external.
