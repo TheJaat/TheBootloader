@@ -109,8 +109,8 @@ mov si, PrimaryVolumeDescriptor.PVD_DirectoryEntry
 ;; Read the very next volume decriptor.
 .read_next_volume_descriptor:
     cmp al, 0xFF			; Check for the end of volume descriptor list
-    					; which is Volume Descriptor Set Terminator
-    					; whose type (first byte) is 0xFF.
+    					    ; which is Volume Descriptor Set Terminator
+    					    ; whose type (first byte) is 0xFF.
     je .volume_descriptor_terminator
 
     add dword [dwVolumeDescriptorStartingSector], 1	; read next sector i.e next volume descriptor.
@@ -149,8 +149,8 @@ Read_Root_Directory_Entry:
 .iterate_entry:
 	xor ax, ax		; Clear out the ax register
 	mov byte al, es:[si]	; it points to the 0 offset in directory entry.
-				; At Offset 0 is length of the record.
-				; It should be non zero, if zero means no valid record.
+				            ; At Offset 0 is length of the record.
+				            ; It should be non zero, if zero means no valid record.
 	test al, al
 	
 	jz .reading_done
@@ -165,16 +165,16 @@ Read_Root_Directory_Entry:
 	call PrintNewline
 	mov di, si		; di and si both contains the current directory entry.
 	add di, 33		; Add 33 to di which is the starting of
-				; file identifier of the current directory entry.
+				    ; file identifier of the current directory entry.
 .print_entries_identifier_char:
 	mov byte al, es:[di]	; read the first character of current directory
-				; entry's file identifier.
+				            ; entry's file identifier.
 	call PrintChar16BIOS
-	inc di			; jmp to next char in file identifier.
+	inc di		        	; jmp to next char in file identifier.
 	loop .print_entries_identifier_char	; loop to print next char.
-	call PrintNewline	; '\n'
+	call PrintNewline	    ; '\n'
 	add byte si, es:[si]	; jump to next directory entry by adding
-				; the length of the current directory entry.
+				            ; the length of the current directory entry.
 	jmp .iterate_entry
 
 .reading_done:
@@ -215,14 +215,14 @@ Find_and_Load_File_from_Root:
 	push bp		; Save old base pointer
 	mov bp, sp	; Set new base pointer
 	sub sp, 36	; Allocate 36 bytes for local variables
-			; 9 local variables of size 4 bytes each
+			    ; 9 local variables of size 4 bytes each
 
 ;; Store parameters in local variables
 	mov word [bp - 36], cx	; store the file identifier length
 	mov word [bp - 32], ax	; store the file identifier address
 	mov word [bp - 4], si	; store the address of first entry
-				; of Root Directory Entries, it will be updated to
-				; point to next entry during scanning.
+			             	; of Root Directory Entries, it will be updated to
+			            	; point to next entry during scanning.
 
 	; Segment and Offset of the root directory record.
 	mov word [bp - 16], es	; Segment of RDR (Root Directory Record)
@@ -252,44 +252,44 @@ Find_and_Load_File_from_Root:
 
 	xor ax, ax		; Clear out the ax register
 	mov byte al, es:[si]	; it points to the 0 offset in directory entry.
-				; At Offset 0 is length of the record.
-				; It should be non zero, if zero means no valid record.
+				            ; At Offset 0 is length of the record.
+				            ; It should be non zero, if zero means no valid record.
 	test al, al
 	jz .didnt_find		; Reached the end of the directory entry list
-				; and didnt find the file
+				        ; and didnt find the file
 
 	;; It is valid directory record.
 
 	; Get the File Flags field (offset 25 from the start of the entry).
 	mov byte al, es:[si + 25]
 	; Check if it's a directory
-	test al, 0x02	; Check if bit 1 is set
+	test al, 0x02	    ; Check if bit 1 is set
 	jnz .is_directory
 
 	;; It is a file
 	
 	;; Check it's identifier.
-	xor cx, cx	; clear out cx
-	xor dx, dx	; clear out dx
+	xor cx, cx	                ; clear out cx
+	xor dx, dx	                ; clear out dx
 	mov byte cl, es:[si + 32]	; get the file identifier length,
-					; which is at offset 32 of directory_entry_record.
-	mov byte dx, cx			; Store the identifier length
-					; into the DX.
+					            ; which is at offset 32 of directory_entry_record.
+	mov byte dx, cx			    ; Store the identifier length
+					            ; into the DX.
 
 	;; Check the file identifier
 	mov di, si	; DI and SI points to the Directory Entry Record
 	add di, 33	; add offset 33, which is the start of the file identifier
-			; DI, now points to the file identifier beginning.
+			    ; DI, now points to the file identifier beginning.
 	mov word cx, [bp - 36]	; length of the file identifier.
 	;mov cx, 6	; The length of the file identifier.
 	mov word si, [bp - 32]	; Load SI to the identifier of the required file.
 	;lea si, [file_identifier]
 	repe cmpsb	; Keep checking the SI and DI for the match.
-			; if the length of the file identifier in both DI and SI matches,
-			; then we have the required file, else jump to the next
-			; directory entry record.
+			    ; if the length of the file identifier in both DI and SI matches,
+			    ; then we have the required file, else jump to the next
+			    ; directory entry record.
 	jne .onto_next	; Jump to the next directory record if file identifier of
-			; particular size mismatch
+			        ; particular size mismatch
 
 	;; Found the file
 
@@ -311,14 +311,14 @@ Find_and_Load_File_from_Root:
 	;; Save LBA, in local variable
 	;; Store File LBA in local variable BP - 8
 	mov dword [bp - 8], eax		; Store the File LBA
-					; to second local variable.
+					            ; to second local variable.
 
 	; Save File Data Length in local variable
 	xor eax, eax
 	mov dword eax, es:[si+ 10]	; Data length of the file in LSB
-				; It is present at offset 10 of Directory Entry Record.
-				; It is of 4 byte in size
-				; and data length is in bytes.
+				                ; It is present at offset 10 of Directory Entry Record.
+				                ; It is of 4 byte in size
+				                ; and data length is in bytes.
 	mov dword [bp - 12], eax
 
 	;; Prints the Data length
@@ -345,17 +345,17 @@ Find_and_Load_File_from_Root:
 	add eax, 2047
 	mov ecx, 2048
 	div ecx		; division also affect the edx register.
-			; so be careful, if you have stored the necessary
-			; information in edx, it must have got wiped out.
+			    ; so be careful, if you have stored the necessary
+			    ; information in edx, it must have got wiped out.
 	; move the sector count to ecx.
 	mov ecx, eax
 
 	mov eax, [bp - 8]	; starting sector low 32 bit (0-indexed LBA)
-				; fetch from the second local variable.
+				        ; fetch from the second local variable.
 	mov esi, 0	; starting sector high 32 bit
 	;mov ecx, 1	; Here you can explicitly specify the sector count,
-			; Otherwise we already calculated the rounded off
-			; sector count to sector size based on the data length.
+			    ; Otherwise we already calculated the rounded off
+			    ; sector count to sector size based on the data length.
 	mov edx, 2048	; Sector sizes in bytes (1 sector = 2048 in ISO 9660)
 	call ReadFromDiskUsingExtendedBIOSFunction
 
