@@ -393,14 +393,14 @@ Find_and_Load_File_from_Root:
 	mov word si, [bp - 4]
 
 	add byte si, es:[si]	; increment si to point to next entry
-				; Increment by adding the size of current entry.
-				; at offset 0 of directory entry, we have the size
-				; of each directory entry. we can get to the second
-				; entry by adding the size of current entry to the
-				; current entry address.
+				            ; Increment by adding the size of current entry.
+				            ; at offset 0 of directory entry, we have the size
+				            ; of each directory entry. we can get to the second
+				            ; entry by adding the size of current entry to the
+				            ; current entry address.
 	mov word [bp - 4], si	; update the next entry address in the local
-				; variable as well.
-	jmp .iterate_entry	; onto the next entry.
+				            ; variable as well.
+	jmp .iterate_entry	    ; onto the next entry.
 
 ;; Sorry but we didnt find your file.
 .didnt_find:
@@ -412,7 +412,7 @@ Find_and_Load_File_from_Root:
 	add sp, 36	; Clear local variables
 	mov sp, bp	; Reset Stack pointer
 	pop bp		; Restore old base pointer
-	popa 	; restore the state
+	popa        ; restore the state
 ;; End of the Find_and_Load_File_from_Root function
 ret
 
