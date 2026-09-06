@@ -129,9 +129,13 @@ BITS 32
     extern jump_to_kernel
 
     ;; global variable declared in ata.c and has the kernel size
+    ;; NOTE: this is the size of kernel.elf *on disk*, NOT the span of the
+    ;; loaded image. It is no longer what we hand to the kernel.
     extern g_kernelSize
-    ;; global variable declared in elf.c and has the elf kernel load address
-    extern g_kernelAddress
+    ;; globals declared in elf.c, filled in by load_elf32
+    extern g_kernelAddress      ; lowest  p_vaddr of any PT_LOAD
+    extern g_kernelEnd          ; highest p_vaddr + p_memsz
+    extern g_kernelEntry        ; e_entry from the ELF header
 
 
 ;; 32-bit includes
@@ -213,12 +217,10 @@ Temp32Bit:
     ;; Here, kernel was loaded successfully
 
     ;; -------------------------------------------------------------------
-    ;; Get the kernel size from the g_kernelSize variable declared and
-    ;; assigned value in vfs.c
-    ;; After retrieving the kernel size store it in the OsBootDescriptor
-    ;; Structure, which is to be passed to kernel.
-    mov dword eax, [g_kernelSize]
-    mov dword [BootDescriptor + OsBootDescriptor.KernelSize], eax
+    ;; The kernel image geometry is NOT known yet - g_kernelSize is only
+    ;; the size of kernel.elf on disk (headers, symtab and all), which is
+    ;; unrelated to where the image actually lands in memory. Both
+    ;; KernelAddr and KernelSize are filled in after load_elf32 below.
 
     ;; At this point, kernel was loaded successfully.
     ;; If it is the binary kernel, we can directly jump to the 
@@ -242,8 +244,13 @@ Temp32Bit:
     ;; declared and assigned value in elf.c
     ;; After retrieving the kernel load address store it in the
     ;; OsBootDescriptor Structure, which is to be passed to kernel.
-    mov dword  eax, [g_kernelAddress]
+    ;; KernelAddr = lowest p_vaddr, KernelSize = span of the loaded image
+    ;; (highest p_vaddr + p_memsz, so .bss is included).
+    mov dword eax, [g_kernelAddress]
     mov dword [BootDescriptor + OsBootDescriptor.KernelAddr], eax
+    mov dword ecx, [g_kernelEnd]
+    sub ecx, eax
+    mov dword [BootDescriptor + OsBootDescriptor.KernelSize], ecx
 
     ;; -------------------------------------------------------------------
     ;; Jump to protected real mode
@@ -326,7 +333,7 @@ Temp16Bit:
     sti
 
     ;; Switch Video Mode
-    ;; call VesaFinish
+    call VesaFinish
 
     ;; Goto Permanent Protected Mode!
     mov eax, cr0
@@ -390,14 +397,21 @@ ProtectedMode:
     ;; -------------------------------------------------------------------
 	;; jmp to the kernel
 	; jmp MEMLOCATION_KERNEL_LOAD_OFFSET
+	;; Jump to the ELF entry point, NOT to a hard-coded 0x100000.
+	;; kernel.ld puts .multiboot at 0x100000 and aligns .text to the next
+	;; 4K boundary, so kernel_entry actually lives at 0x101000. Jumping to
+	;; 0x100000 executes the 12-byte multiboot header as instructions, and
+	;; its first one is `add dh, [eax+0x31bad]` - which silently corrupts
+	;; bits 8-15 of EDX, the BootDescriptor pointer we are about to pass.
+	mov ecx, [g_kernelEntry]
+
 	xor esi, esi
 	xor edi, edi
 	mov eax, MULTIBOOT_MAGIC
 	mov ebx, BootHeader
 	mov edx, BootDescriptor
 
-	;; Kernel is relocated at 0x100000
-	jmp 0x100000
+	jmp ecx
     ;; -------------------------------------------------------------------
 
 ;; Final Black hole

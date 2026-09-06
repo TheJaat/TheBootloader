@@ -97,6 +97,16 @@ GetMemorySize:
 ; 	- EBX: 0 -> Success, 1 -> Err
 ; ********************************
 LoadMemoryMap:
+	; Save the destination segment. ES is NOT guaranteed to be 0 here:
+	; stage1 leaves it at SUBSYSTEM_MEM_SEGEMENT (0x8000) after pulling
+	; stage2 off the ISO, and int 0x15/E820 writes its entries to ES:DI.
+	; With ES=0x8000 the map lands at 0x89000 while BootHeader.MemMapAddr
+	; still says 0x9000, so the kernel reads an untouched buffer and sees
+	; nothing but zero-sized regions.
+	push 	es
+	xor 	ax, ax
+	mov 	es, ax
+
 	; Save buffer
 	push 	edi
 
@@ -150,10 +160,13 @@ LoadMemoryMap:
 		; Query time
 		mov 	eax, 0xE820	; Function number for memory map query
 		mov 	ecx, 24		; Size of memory map structure
+		; EDX must hold 'SMAP' on entry to *every* E820 call, not just the
+		; first one. The BIOS is free to clobber it, and it was only being
+		; reloaded after the int, so the second call could silently fail.
+		mov 	edx, BIOS_MEMMAP_SIGNATURE
 		mov 	[es:di + 20], dword 1	; Set ACPI attribute to 1
 		int 	0x15			; Invoke BIOS interrupt 0x15
 		jc 		.Done		; Jump to Done if carry flag is set (end of memory map)
-		mov 	edx, BIOS_MEMMAP_SIGNATURE
 
 	.MediasRes:
 		; Parse Entry
@@ -196,10 +209,12 @@ LoadMemoryMap:
 		call	PrintNewline
 		mov 	ebx, 1			; set ebx to 1  (indicating failure)
 		mov 	ebp, 0			; Clear ebp (entry count)
+		pop 	es			; Restore the caller's segment
 		ret				; Return
 
 	.Done:
 		mov 	ebx, 0			; Set ebx to 0 (indicating success)
+		pop 	es			; Restore the caller's segment
 ret
 
 
