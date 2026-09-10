@@ -132,6 +132,10 @@ BITS 32
     ;; NOTE: this is the size of kernel.elf *on disk*, NOT the span of the
     ;; loaded image. It is no longer what we hand to the kernel.
     extern g_kernelSize
+    ;; ramdisk globals, filled in by load_ramdisk in vfs.c
+    extern load_ramdisk
+    extern g_ramdiskAddress
+    extern g_ramdiskSize
     ;; globals declared in elf.c, filled in by load_elf32
     extern g_kernelAddress      ; lowest  p_vaddr of any PT_LOAD
     extern g_kernelEnd          ; highest p_vaddr + p_memsz
@@ -244,6 +248,21 @@ Temp32Bit:
     ;; declared and assigned value in elf.c
     ;; After retrieving the kernel load address store it in the
     ;; OsBootDescriptor Structure, which is to be passed to kernel.
+    ;; -------------------------------------------------------------------
+    ;; Load the ramdisk. A missing RAMDISK.MDR is not fatal - load_ramdisk
+    ;; returns success with a zero size and the kernel boots without one.
+    call load_ramdisk
+    test eax, eax
+    jnz  .RamdiskOk
+    mov  si, sRamdiskFailed
+    call PrintString32
+    .RamdiskOk:
+
+    mov dword eax, [g_ramdiskAddress]
+    mov dword [BootDescriptor + OsBootDescriptor.RamDiskAddr], eax
+    mov dword eax, [g_ramdiskSize]
+    mov dword [BootDescriptor + OsBootDescriptor.RamDiskSize], eax
+
     ;; KernelAddr = lowest p_vaddr, KernelSize = span of the loaded image
     ;; (highest p_vaddr + p_memsz, so .bss is included).
     mov dword eax, [g_kernelAddress]
@@ -433,7 +452,8 @@ sBootloaderName	db	"TheTaaJBoot Version 0.0.1, Author: TheJat", 0
 sProtectedModeWelcomeSentence	db	'Entered the Protective Land', 0
 sKernelLoadedSentence	db	'Kernel was Loaded', 0
 module_name db 'MODULE.ELF', 0  ; Define the string with a null terminator
-kernel_name db 'KERNEL/KERNEL.ELF', 0   ; Define the string with a null terminator
+kernel_name db 'KERNEL/KERNEL.ELF', 0
+sRamdiskFailed db 'Ramdisk load failed, continuing without one', 0x0D, 0x0A, 0   ; Define the string with a null terminator
 									    ; Now we are in ISO level 3 which supports upto 31 characters for the file identifier
 										; If again switching back to ISO level 1, which might be the default, if not specified explicitly.
 										; In that case, change the name to 11 characters long, 8 for name and 3 for extension,

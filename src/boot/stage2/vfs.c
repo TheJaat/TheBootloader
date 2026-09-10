@@ -13,6 +13,11 @@ vfs_operations_t vfs_ops;
 */
 int g_kernelSize;
 
+/* Ramdisk, loaded straight after the kernel. Zero when the image has no
+ * ramdisk - that is not an error, the kernel simply boots without one. */
+int g_ramdiskSize = 0;
+unsigned int g_ramdiskAddress = 0;
+
 void init_vfs() {
     boot_print("[VFS] Initializing VFS\n");
     vfs_ops.mount = iso9660_mount;
@@ -78,4 +83,38 @@ int load_kernel(const char* kernel_name)
     // uint32_t kernel_address = KERNEL_LOAD_START;
 	// void (*kernel_entry)(void) = (void (*)(void))0x300000;
 	// kernel_entry();
+}
+
+/* load_ramdisk
+ * Reads RAMDISK.MDR into MEMORY_LOCATION_RAMDISK. Absence is not fatal:
+ * the kernel checks RamDiskSize and carries on without one. */
+int load_ramdisk() {
+    boot_print("[VFS] Loading ramdisk\n");
+
+    vfs_node_t *file = vfs_ops.open("RAMDISK.MDR");
+    if (file == 0) {
+        boot_print("[VFS] No RAMDISK.MDR, continuing without one\n");
+        g_ramdiskSize = 0;
+        g_ramdiskAddress = 0;
+        return 1;   /* not an error */
+    }
+
+    if (file->size > RAMDISK_MAX_SIZE) {
+        boot_print("[VFS] Ramdisk is too large for its reserved window\n");
+        g_ramdiskSize = 0;
+        return 0;
+    }
+
+    unsigned char *load_address = (unsigned char *)RAMDISK_LOAD_ADDRESS;
+    int bytes = vfs_ops.read(file, load_address, file->size, 0);
+    if (bytes != file->size) {
+        boot_print("[VFS] Ramdisk read failed\n");
+        g_ramdiskSize = 0;
+        return 0;
+    }
+
+    g_ramdiskAddress = RAMDISK_LOAD_ADDRESS;
+    g_ramdiskSize = file->size;
+    boot_print("[VFS] Ramdisk loaded\n");
+    return 1;
 }
