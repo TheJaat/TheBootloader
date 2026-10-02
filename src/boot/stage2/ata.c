@@ -135,9 +135,48 @@ int ata_status_wait(struct ata_device * dev, int timeout) {
         int i = 0;
         while ((status = inb(dev->io_base + ATA_REG_STATUS)) & ATA_SR_BSY && (i < timeout)) i++;
     } else {
-        while ((status = inb(dev->io_base + ATA_REG_STATUS)) & ATA_SR_BSY);
+        /* Bounded even when asked for an unbounded wait. A drive that
+         * never clears BSY - or a channel with nothing on it - would
+         * otherwise stop the boot with no message. */
+        int i = 0;
+        while ((status = inb(dev->io_base + ATA_REG_STATUS)) & ATA_SR_BSY
+               && (i < 1000000)) i++;
     }
     return status;
+}
+
+/* ata_wait_drq
+ * Waits, with a bound, for the drive to say it has data. Returns 0 when
+ * DRQ is set, non-zero on error, on an absent device, or on timeout.
+ *
+ * The detection below used to send IDENTIFY, pause 400ns, and start
+ * reading the data port. That is a race: the drive may not have set DRQ
+ * yet, and reading the port before it does returns nothing useful and
+ * can stall. It only became visible once a hard disk was attached to the
+ * primary channel - with only a CD-ROM present the slow path was never
+ * taken.
+ *
+ * A status of zero means no device is attached at all. Reading 256 words
+ * from an empty channel is what produced the hang. */
+static int ata_wait_drq(struct ata_device * dev)
+{
+	int i;
+
+	for (i = 0; i < 100000; i++) {
+		unsigned char status = inb(dev->io_base + ATA_REG_STATUS);
+
+		if (status == 0) {
+			return 1;           /* nothing on this channel */
+		}
+		if (status & (ATA_SR_ERR | ATA_SR_DF)) {
+			return 1;           /* the drive refused the command */
+		}
+		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) {
+			return 0;
+		}
+	}
+
+	return 1;                   /* timed out rather than hanging */
 }
 
 void detect_device_ata_atapi(struct ata_device *dev) {
@@ -163,7 +202,10 @@ void detect_device_ata_atapi(struct ata_device *dev) {
 		return;
 	}
 
-	if ((cl == 0x00 & ch == 0x00) || (cl == 0x3C && ch == 0xC3))
+	/* Note: a bitwise & was used here where && was meant. It happens to
+	 * work for these values, but it is also worth confirming the drive
+	 * is really there - an empty channel can read back as 0x00/0x00. */
+	if ((cl == 0x00 && ch == 0x00) || (cl == 0x3C && ch == 0xC3))
 	{
 		// Parallel ATA Device \\ Emulated SATA
 		// SATA hardware appear as legacy IDE hardware
@@ -174,6 +216,12 @@ void detect_device_ata_atapi(struct ata_device *dev) {
 		// Send IDENTIFY command
 		outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 		ata_io_wait(dev);
+
+		if (ata_wait_drq(dev)) {
+			boot_print("[ATA] Device did not respond to IDENTIFY.\n");
+			dev->is_device_connected = 0;
+			return;
+		}
 
 		//  Get 512 identity bytes
 		uint16_t *identify_data = (uint16_t *)&dev->identity;
@@ -230,7 +278,13 @@ void detect_device_ata_atapi(struct ata_device *dev) {
 		outb(dev->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY_PACKET);
 		ata_io_wait(dev);
 
-		ata_wait(dev, 0);
+		/* ata_wait(dev, 0) waited for BSY to clear with no bound and no
+		 * DRQ check, so an absent device held the boot here forever. */
+		if (ata_wait_drq(dev)) {
+			boot_print("[ATAPI] Device did not respond to IDENTIFY.\n");
+			dev->is_device_connected = 0;
+			return;
+		}
 
 		// read 512 bytes identity data
 		uint16_t *buf = (uint16_t *)&dev->identity;
