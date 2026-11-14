@@ -9,6 +9,7 @@ BITS 16
 %define 		DATA_DESC 	0x10
 %define			CODE16_DESC	0x18
 %define 		DATA16_DESC 	0x20
+%define			CODE64_DESC	0x28	; longmode.asm hard-codes this too
 
 
 
@@ -79,6 +80,18 @@ StartOfGdt:		; Beginning of the GDT section
 	db 10010010b    ; access
 	db 00001111b    ; granularity
 	db 0            ; base high
+
+; gdt code 64bit:	; code descriptor for long mode (longmode.asm)
+	; Base and limit are ignored in 64-bit mode; what matters is the
+	; L bit (bit 5 of the flags byte), which makes the CPU decode
+	; 64-bit instructions once CS holds this selector. D must be 0
+	; when L is 1.
+	dw 0            ; limit low (ignored)
+	dw 0            ; base low (ignored)
+	db 0            ; base middle (ignored)
+	db 10011010b    ; access: present, ring 0, code, readable
+	db 00100000b    ; flags: L=1, D=0
+	db 0            ; base high (ignored)
 EndOfGdt:
 
 ; The actual Gdt Header

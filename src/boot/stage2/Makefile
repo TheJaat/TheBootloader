@@ -13,7 +13,10 @@ BUILD_DIR = $(ROOT_DIR)/build
 STAGE2_DIR = $(BUILD_DIR)/stage2
 
 SRC_DIR = .
-ASM_SRC = $(wildcard $(SRC_DIR)/*.asm)    # Finds all .asm files in the current directory
+# stage2.asm MUST be linked first: stage1 jumps to the very first byte of
+# STAGE2.BIN, and stage2.asm's real-mode labels must stay below 0xFFFF.
+# Every other .asm file (longmode.asm) follows it, then the C objects.
+ASM_SRC = $(SRC_DIR)/stage2.asm $(filter-out $(SRC_DIR)/stage2.asm, $(wildcard $(SRC_DIR)/*.asm))
 C_SRC = $(wildcard $(SRC_DIR)/*.c)       # Finds all .c files in the current directory
 
 OBJ = $(patsubst $(SRC_DIR)/%.asm, $(STAGE2_DIR)/%.o, $(ASM_SRC)) \

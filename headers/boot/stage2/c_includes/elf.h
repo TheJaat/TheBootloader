@@ -128,6 +128,49 @@ typedef struct {
 #define SHT_NOBITS   8
 #define SHT_REL      9
 
+/* ---- ELF64 ----------------------------------------------------------
+ *
+ * Only what the loader needs: the file header and program headers.
+ * Stage 2 is 32-bit code, but `unsigned long long` is a full 64 bits
+ * there too, so these structures read correctly; the loader then refuses
+ * any address that does not fit below 4 GiB. */
+
+#define EM_X86_64  62
+
+typedef unsigned long long Elf64_Addr;
+typedef unsigned long long Elf64_Off;
+typedef unsigned long long Elf64_Xword;
+typedef unsigned int       Elf64_Word;
+typedef unsigned short     Elf64_Half;
+
+typedef struct {
+	unsigned char e_ident[EI_NIDENT];
+	Elf64_Half    e_type;
+	Elf64_Half    e_machine;
+	Elf64_Word    e_version;
+	Elf64_Addr    e_entry;
+	Elf64_Off     e_phoff;
+	Elf64_Off     e_shoff;
+	Elf64_Word    e_flags;
+	Elf64_Half    e_ehsize;
+	Elf64_Half    e_phentsize;
+	Elf64_Half    e_phnum;
+	Elf64_Half    e_shentsize;
+	Elf64_Half    e_shnum;
+	Elf64_Half    e_shstrndx;
+} Elf64_Header;                 /* 64 bytes, no padding on either ABI */
+
+typedef struct {
+	Elf64_Word    p_type;
+	Elf64_Word    p_flags;      /* note: second here, last in ELF32 */
+	Elf64_Off     p_offset;
+	Elf64_Addr    p_vaddr;
+	Elf64_Addr    p_paddr;
+	Elf64_Xword   p_filesz;
+	Elf64_Xword   p_memsz;
+	Elf64_Xword   p_align;
+} Elf64_Phdr;                   /* 56 bytes */
+
 #define ELF32_R_SYM(i)    ((i) >> 8)
 #define ELF32_R_TYPE(i)   ((unsigned char)(i))
 #define ELF32_R_INFO(s,t) (((s) << 8) + (unsigned char)(t))

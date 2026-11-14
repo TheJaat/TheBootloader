@@ -112,7 +112,10 @@ jmp $
 ;; The temporary 32-bit stay area
 BITS 32
 ;; External C/C++ functions
-    extern load_elf32
+    extern load_elf             ; elf.c: ELF32 or ELF64, whichever was staged
+    extern g_kernelIs64         ; elf.c: set when the kernel is ELF64
+    extern prepare_long_mode    ; longmode.c
+    extern EnterLongMode        ; longmode.asm
     extern ata_read_sector
 
     ; stage2 printing
@@ -234,7 +237,7 @@ Temp32Bit:
     ; call jump_to_kernel     ; C-way, for jumping to the binary kernel.
 
     ;; -------------------------------------------------------------------
-    call load_elf32
+    call load_elf
     ;; Check the return value
     ;;                       - 1: Success, print success message,
     ;;                       - otherwise: failure
@@ -422,6 +425,18 @@ ProtectedMode:
 	;; 0x100000 executes the 12-byte multiboot header as instructions, and
 	;; its first one is `add dh, [eax+0x31bad]` - which silently corrupts
 	;; bits 8-15 of EDX, the BootDescriptor pointer we are about to pass.
+	;; A 64-bit kernel takes a different road from here: page tables,
+	;; long mode, and a TaajBootInfo instead of the MultiBoot structures.
+	cmp dword [g_kernelIs64], 0
+	je .Kernel32
+
+	push VesaModeInfo
+	push BootHeader
+	call prepare_long_mode          ; returns the PML4 address in EAX
+	add esp, 8
+	jmp EnterLongMode               ; does not return
+
+.Kernel32:
 	mov ecx, [g_kernelEntry]
 
 	xor esi, esi
