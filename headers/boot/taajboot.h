@@ -25,16 +25,22 @@
  *     on
  *   - RDI = physical address of the TaajBootInfo
  *   - paging on, with two mappings, both using 2 MiB pages:
- *       identity      virtual 0 .. 4 GiB  -> physical 0 .. 4 GiB
+ *       identity      virtual 0 .. N -> physical 0 .. N, where N is at
+ *                     least 4 GiB (the UEFI loader maps all of RAM)
  *       kernel window virtual 0xFFFFFFFF80000000 + x -> physical x,
  *                     for x in 0 .. 1 GiB
  *     The identity map exists so the kernel can read this structure and
  *     the framebuffer before it has page tables of its own. It should
  *     build its own and stop relying on these early.
- *   - everything below 1 MiB belongs to the loader: this structure, the
- *     memory map, the GDT and the initial page tables live there. The
- *     kernel must not hand that memory out until it has copied what it
- *     needs and switched to its own page tables.
+ *   - this structure, the memory map and the page tables in use at entry
+ *     are below 4 GiB, and are memory the kernel must not hand out until
+ *     it has switched to its own page tables:
+ *       BIOS  all of it lives below 1 MiB
+ *       UEFI  all of it is in TAAJ_MEMORY_LOADER regions
+ *     The kernel image itself is in a LOADER (UEFI) or USABLE (BIOS)
+ *     region; KernelPhysical/KernelSize say where.
+ *   - the stack pointer is valid but tiny; set up a stack before
+ *     anything else.
  */
 
 #include <stdint.h>
@@ -48,12 +54,16 @@
 
 /* Memory region types. 1-5 match the BIOS E820 types on purpose, so the
  * BIOS loader passes them through unchanged; UEFI types are translated
- * into these. */
+ * into these. A kernel must treat any type it does not know as reserved. */
 #define TAAJ_MEMORY_USABLE      1
 #define TAAJ_MEMORY_RESERVED    2
 #define TAAJ_MEMORY_ACPI_RECLAIMABLE 3
 #define TAAJ_MEMORY_ACPI_NVS    4
 #define TAAJ_MEMORY_BAD         5
+/* Not E820: memory the loader allocated for the kernel - this structure,
+ * the memory map, the entry page tables, the kernel image. Reclaimable
+ * once the kernel no longer needs any of it. */
+#define TAAJ_MEMORY_LOADER      6
 
 typedef struct _TaajMemoryRegion {
     uint64_t Base;
