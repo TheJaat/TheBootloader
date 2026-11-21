@@ -18,6 +18,9 @@ int g_kernelSize;
 int g_ramdiskSize = 0;
 unsigned int g_ramdiskAddress = 0;
 
+/* Set by load_elf (elf.c), which runs before load_ramdisk. */
+extern unsigned int g_kernelIs64;
+
 void init_vfs() {
     boot_print("[VFS] Initializing VFS\n");
     vfs_ops.mount = iso9660_mount;
@@ -105,7 +108,13 @@ int load_ramdisk() {
         return 0;
     }
 
-    unsigned char *load_address = (unsigned char *)RAMDISK_LOAD_ADDRESS;
+    /* The 32-bit kernel reads its ramdisk at a fixed address it was
+     * compiled with. A 64-bit kernel is told the address, and may itself
+     * reach past that fixed one - so its ramdisk goes where the kernel's
+     * file was staged: the kernel has been copied out of there, and
+     * nothing needs the file again. */
+    unsigned int address = g_kernelIs64 ? KERNEL_LOAD_START : RAMDISK_LOAD_ADDRESS;
+    unsigned char *load_address = (unsigned char *)address;
     int bytes = vfs_ops.read(file, load_address, file->size, 0);
     if (bytes != file->size) {
         boot_print("[VFS] Ramdisk read failed\n");
@@ -113,7 +122,7 @@ int load_ramdisk() {
         return 0;
     }
 
-    g_ramdiskAddress = RAMDISK_LOAD_ADDRESS;
+    g_ramdiskAddress = address;
     g_ramdiskSize = file->size;
     boot_print("[VFS] Ramdisk loaded\n");
     return 1;

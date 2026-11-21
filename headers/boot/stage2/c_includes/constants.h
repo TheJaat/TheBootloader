@@ -1,6 +1,10 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
+/* Where the kernel's file is read to before its segments are copied
+ * to their places. Once that is done the buffer is free, and a 64-bit
+ * kernel's ramdisk is loaded into it: such a kernel may occupy 1 MiB up
+ * to here, across RAMDISK_LOAD_ADDRESS below. */
 #define KERNEL_LOAD_START 0x300000
 
 /* The ramdisk is loaded here and left in place - the kernel reads it

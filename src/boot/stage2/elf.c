@@ -186,10 +186,17 @@ int load_elf32()
 #define KERNEL_WINDOW      0xFFFFFFFF80000000ULL
 #define KERNEL_WINDOW_SIZE 0x40000000ULL        /* 1 GiB */
 
-/* load_ramdisk() runs after this and writes to RAMDISK_LOAD_ADDRESS, so
- * a kernel reaching that far would be overwritten by its own ramdisk.
- * The 32-bit kernel predates this check; a 64-bit one is held to it. */
-#define LOAD_MAX_ADDRESS   RAMDISK_LOAD_ADDRESS
+/* A 64-bit kernel may fill everything from 1 MiB up to the staging
+ * buffer its file is being copied *from*: a segment reaching that far
+ * would overwrite the part of the file not copied yet.
+ *
+ * It used to stop a megabyte earlier, at RAMDISK_LOAD_ADDRESS, because
+ * load_ramdisk() runs after this and wrote there. For a 64-bit kernel
+ * the ramdisk now goes into the staging buffer instead - free by then,
+ * the kernel having been copied out of it (see load_ramdisk in vfs.c).
+ * The 32-bit kernel is loaded exactly as before: it has those two
+ * addresses compiled in. */
+#define LOAD_MAX_ADDRESS   KERNEL_ELF_READ
 
 /* Set by load_elf64, read by stage2.asm and longmode.c. */
 unsigned int       g_kernelIs64;
@@ -238,11 +245,11 @@ static int load_elf64(void)
 			continue;
 		}
 
-		/* Physical placement: above the loader, below the ramdisk. Both
+		/* Physical placement: above the loader, below the staging buffer. Both
 		 * bounds are far below 4 GiB, so every value below fits in the
 		 * 32-bit pointers this code runs with. */
 		if (End < Dest || Dest < LOAD_MIN_ADDRESS || End > LOAD_MAX_ADDRESS) {
-			boot_print("[load_elf64], Segment outside 1 MiB .. ramdisk, refusing.\n");
+			boot_print("[load_elf64], Segment outside 1 MiB .. 3 MiB, refusing.\n");
 			return 0;
 		}
 
