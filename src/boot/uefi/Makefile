@@ -1,4 +1,5 @@
-# Makefile for src/boot/uefi - TheTaaJBoot for UEFI, as BOOTX64.EFI.
+# Makefile for src/boot/uefi - TheTaaJBoot for UEFI: BOOTX64.EFI for
+# the PC, BOOTAA64.EFI for AArch64 (`make aarch64`).
 #
 # A UEFI application is a Windows-style PE/COFF executable, not ELF, so
 # GCC's ELF toolchain cannot produce one directly. Clang can, by
@@ -30,11 +31,30 @@ LDFLAGS = -subsystem:efi_application -entry:efi_main -nodefaultlib -dll:no
 SOURCES = main.c
 OBJECTS = $(SOURCES:%.c=$(OUT_DIR)/%.obj)
 
-.PHONY: all clean
+# The AArch64 loader: the same compiler, told another CPU. It is one
+# file (aarch64.c) and needs no flags of the PC's (there is no red zone
+# in the Arm calling convention to switch off). -mgeneral-regs-only: no
+# floating point registers, which the firmware need not have enabled.
+A64_TARGET = $(OUT_DIR)/BOOTAA64.EFI
+A64_CFLAGS = -target aarch64-unknown-windows \
+             -std=c11 -O2 -Wall -Wextra -Werror \
+             -ffreestanding -fno-stack-protector -fno-stack-check \
+             -mgeneral-regs-only -fshort-wchar
+
+.PHONY: all aarch64 clean
 
 all: $(TARGET)
 
-$(OUT_DIR)/%.obj: %.c efi.h elf64.h $(ROOT_DIR)/headers/boot/taajboot.h
+aarch64: $(A64_TARGET)
+
+$(OUT_DIR)/aarch64.obj: aarch64.c efi.h common.h
+	@mkdir -p $(OUT_DIR)
+	$(CC) $(A64_CFLAGS) -c $< -o $@
+
+$(A64_TARGET): $(OUT_DIR)/aarch64.obj
+	$(LINK) $(LDFLAGS) -out:$@ $<
+
+$(OUT_DIR)/%.obj: %.c efi.h common.h elf64.h $(ROOT_DIR)/headers/boot/taajboot.h
 	@mkdir -p $(OUT_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 

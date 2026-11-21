@@ -16,12 +16,17 @@
  *
  * Calling convention: UEFI on x86_64 uses the Microsoft x64 ABI (RCX,
  * RDX, R8, R9), not the System V one Linux uses. EFIAPI marks every
- * firmware function that way. */
+ * firmware function that way. On AArch64 there is one convention, the
+ * Arm one, and nothing to mark. */
 
 #include <stdint.h>
 #include <stddef.h>
 
+#if defined(__x86_64__)
 #define EFIAPI __attribute__((ms_abi))
+#else
+#define EFIAPI
+#endif
 
 typedef uint64_t UINTN;
 typedef uint16_t CHAR16;
@@ -300,5 +305,10 @@ typedef struct {
     { 0x8868E871, 0xE4F1, 0x11D3, { 0xBC, 0x22, 0x00, 0x80, 0xC7, 0x3C, 0x88, 0x81 } }
 #define EFI_ACPI_10_TABLE_GUID \
     { 0xEB9D2D30, 0x2D88, 0x11D3, { 0x9A, 0x16, 0x00, 0x90, 0x27, 0x3F, 0xC1, 0x4D } }
+
+/* The device tree, where the firmware has one to give: a configuration
+ * table too. */
+#define EFI_DTB_TABLE_GUID \
+    { 0xB1B621D5, 0xF19C, 0x41A5, { 0x83, 0x0B, 0xD9, 0x15, 0x2C, 0x69, 0xAA, 0xE0 } }
 
 #endif /* __EFI_H__ */
