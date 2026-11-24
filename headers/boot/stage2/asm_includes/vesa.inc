@@ -104,8 +104,8 @@ VesaFindBestSuitableMode:
 		rep 	stosd
 		pop 	esi
 
-		; Load mode
-		mov 	cx, word [es:si]
+		; Load mode (the list is at FS:SI; see VesaSetup)
+		mov 	cx, word [fs:si]
 
 		; End of list? 
 		cmp 	cx, 0xFFFF
@@ -126,9 +126,12 @@ VesaFindBestSuitableMode:
 		; Obviously, worked, now lets parse
 		mov 	ax, word [VesaModeInfo + VbeModeStruct.Attributes]
 
-		; We want Color, Graphics, LFB
-		and 	ax, 0x009B
-		cmp 	ax, 0x009B
+		; We want: supported (bit 0), color (3), graphics (4), a linear
+		; framebuffer (7). Bit 1 ("extended information") is not asked
+		; for: VBE 1.2 and later always give it, and a BIOS that leaves
+		; it clear would lose every mode for nothing.
+		and 	ax, 0x0099
+		cmp 	ax, 0x0099
 		jne 	.NextEntry
 
 		; We want 32 bit modes!! ALPHA FTW
@@ -243,11 +246,22 @@ VesaSetup:
 	test 	eax, eax
 	jne 	.Fail
 
-	; Now parse list
+	; Now parse list. ModeListPtr is a far pointer, segment:offset
+	; (segment in the high word). SeaBIOS (QEMU) puts the list inside
+	; our own buffer, in segment 0, so reading it as an offset in
+	; segment 0 used to work; VMware's video BIOS keeps it in its ROM
+	; (segment 0xC000), where that read found nothing and no mode was
+	; chosen. FS holds the list's segment; ES stays 0, for the mode
+	; information the BIOS writes into VesaModeInfo.
 	xor 	eax, eax
 	mov 	es, ax
-	mov 	esi, dword [VesaControllerInfo + VbeControllerStruct.ModeListPtr]
+	mov 	eax, dword [VesaControllerInfo + VbeControllerStruct.ModeListPtr]
+	movzx 	esi, ax
+	shr 	eax, 16
+	mov 	fs, ax
 	call 	VesaFindBestSuitableMode
+	xor 	ax, ax
+	mov 	fs, ax
 
 	; Yay?
 	cmp 	word [wOptimizedVesaMode], 0
