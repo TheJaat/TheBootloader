@@ -50,6 +50,9 @@ stage2_entry:
     ;; Receive the passed drive number from stage 1
     ;; It is passed in register AL
     mov [bPhysicalDriveNum], al         ; store the received drive number
+    ;; A CD's sectors (2048 bytes) or a disk's (512: the image on a USB
+    ;; stick)? bios_disk.c reads either way.
+    call DiskSectorSize
     mov si, sReceivedDriveNumber
     call PrintString16BIOS
     call PrintWordNumber                ; Print the received drive number
@@ -116,20 +119,15 @@ BITS 32
     extern g_kernelIs64         ; elf.c: set when the kernel is ELF64
     extern prepare_long_mode    ; longmode.c
     extern EnterLongMode        ; longmode.asm
-    extern ata_read_sector
 
     ; stage2 printing
     extern init_print_stage2
 
-    extern detect_ata_devices
 
-    extern check_and_set_atapi_device
 
     extern init_vfs
     extern load_kernel
 
-    extern find_and_load_kernel_from_9660_using_atapi
-    extern jump_to_kernel
 
     ;; global variable declared in ata.c and has the kernel size
     ;; NOTE: this is the size of kernel.elf *on disk*, NOT the span of the
@@ -146,7 +144,6 @@ BITS 32
 
 
 ;; 32-bit includes
-    %include "ata.inc"          ; For ATA interface
     %include "print32.inc"      ; For Printing in 32 bit assembly
 
 
@@ -182,34 +179,11 @@ Temp32Bit:
     ;; -------------------------------------------------------------------
 
     ;; -------------------------------------------------------------------
-    ; Identify the ATA devices
-    call identify_ata_devices
-;jmp $
-    call detect_ata_devices
-    ;; -------------------------------------------------------------------
-    ;; Find the kernel from the ISO 9660 fs and load it to the destined location.
-    ;; 32-bit system make use of cdecl calling convention,
-    ;; while x64 make use of System V AMD64 Calling Convention;
-    ;; 
-    ;; cdecl calling convention =
-    ;; In the cdecl calling convention, which is common for x86 (32-bit) systems,
-    ;; function arguments are passed on the stack.
-    ;; Arguments are pushed from right to left, and the caller is responsible
-    ;; for cleaning up the stack after the function call.
-    ;;
-    ;; System V AMD64 calling convention =
-    ;; In the System V AMD64 calling convention, which is common for x86-64
-    ;; (64-bit) systems, the first six integer or pointer arguments are
-    ;; passed in registers rdi, rsi, rdx, rcx, r8, and r9.
-    ;; Additional arguments are passed on the stack.
-
-
-    call check_and_set_atapi_device    ; Check for the ATAPI device
-    cmp eax, 1                         ; Check if we found the valid ATAPI device
-            ; if - 1: Success
-            ; if - 0: Failure
-    jne NoATAPIDevice
-
+    ;; Find the kernel in the ISO 9660 file system and load it. The disk
+    ;; is read through the BIOS (bios_disk.c, bios_read below): a CD, or
+    ;; the same image on a USB stick or a hard disk, behind whatever
+    ;; controller the BIOS knows. (32-bit C functions take their
+    ;; arguments on the stack, pushed right to left - cdecl.)
     call init_vfs    ; Initialize the Virtual FileSystem
 
     push kernel_name    ; Push the address of the kernel name string onto the stack
@@ -290,15 +264,93 @@ Temp32Bit:
 ;; Another Black hole
 jmp $
 
-NoATAPIDevice:
-    mov esi, sNoATAPIDeviceFound
-    mov bl, LMAGENTA           ; Foreground = Light Magenta
-    mov bh, BLACK              ; Background = Black
-    call PrintString32
+;; -------------------------------------------------------------------
+;; bios_read(lba, count) - for bios_disk.c, from 32-bit C
+;;
+;; Reads `count` sectors of the boot disk, from sector `lba`, into
+;; BIOS_BUFFER (0x60000) with int 13h function 42h. Returns 0, or the
+;; BIOS's error code (never 0 on an error: 0xFF if it gave none).
+;;
+;; int 13h works only in real mode, so: down to 16-bit protected mode
+;; (CODE16_DESC), protection off, real mode with the BIOS's interrupt
+;; table; the call; and back up the same way. The stack stays where it
+;; is: it is below 64 KiB, so SS = 0 and SP = ESP's low half reach it.
+;; This code must be below 64 KiB too - real mode's CS = 0 reaches no
+;; further - and stage2.asm is linked first, at 0xCC00.
+;; -------------------------------------------------------------------
+BITS 32
+global bios_read
+global wDiskSectorSize
+bios_read:
+    push ebp
+    mov ebp, esp
+    pushad
+    mov eax, [ebp + 8]
+    mov [BiosDap.Lba], eax
+    mov eax, [ebp + 12]
+    mov [BiosDap.Count], ax
+    mov [BiosSavedEsp], esp
+    jmp CODE16_DESC:.Protected16
+BITS 16
+.Protected16:
+    mov ax, DATA16_DESC
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov eax, cr0
+    and eax, 0xFFFFFFFE
+    mov cr0, eax
+    jmp 0:.Real
+.Real:
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    lidt [Idt16]
+    sti
+    mov ah, 0x42
+    mov dl, [bPhysicalDriveNum]
+    mov si, BiosDap
+    int 0x13
+    jnc .Read
+    test ah, ah
+    jnz .Failed
+    mov ah, 0xFF
+.Failed:
+    mov [BiosResult], ah
+    jmp .Up
+.Read:
+    mov byte [BiosResult], 0
+.Up:
     cli
-    hlt
-jmp $
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax
+    jmp CODE_DESC:.Protected32
+BITS 32
+.Protected32:
+    mov ax, DATA_DESC
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov esp, [BiosSavedEsp]
+    popad
+    movzx eax, byte [BiosResult]
+    pop ebp
+    ret
 
+align 4
+BiosDap:
+    db 16, 0
+.Count: dw 0
+    dw 0x0000, 0x6000          ; 6000:0000 = 0x60000, BIOS_BUFFER
+.Lba: dq 0
+BiosSavedEsp: dd 0
+BiosResult: db 0
 
 BITS 16
 PrepareToJumpToReal:
@@ -474,7 +526,6 @@ sRamdiskFailed db 'Ramdisk load failed, continuing without one', 0x0D, 0x0A, 0  
 										; In that case, change the name to 11 characters long, 8 for name and 3 for extension,
 										; separated by the dot (.)
 sKernelLoadingFailureSentence db 'Failure in loading kernel', 0
-sNoATAPIDeviceFound db 'No ATAPI device is found', 0
 sKernelELFReadingLoadingFailedSentence db 'Failure in reading and loading kernel elf file.', 0
 
 ;times (300*1023 - ($ - $$)) db 0

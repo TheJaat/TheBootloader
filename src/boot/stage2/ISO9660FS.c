@@ -1,5 +1,5 @@
 #include <ISO9660FS.h>
-#include <ata.h>
+#include <bios_disk.h>
 #include <ISO9660.h>
 #include <print.h>
 #include <mem.h>

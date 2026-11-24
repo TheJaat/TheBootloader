@@ -137,6 +137,8 @@ FixCS:
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;; ISO 9660 things...
 	; Read the ISO 9660
+	; A CD's sectors or a disk's (the image on a USB stick)?
+	call DiskSectorSize
 	call Read_volume_descriptors
 	;; TODO, there should be way to check for the success and failure of above function
 	;	on return, because the below functions depends on it.

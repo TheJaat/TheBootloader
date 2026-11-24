@@ -45,9 +45,20 @@ ReadFromDisk:
 ;
 ; Registers:
 ; 	- Conserves all but ES:BX
+;
+; The sectors asked for are ISO 9660's, 2048 bytes. When the boot disk's
+; own are 512 (a USB stick or a hard disk holding the image, not a CD:
+; DiskSectorSize says), each is four of the disk's.
 ; **************************
 ReadFromDiskUsingExtendedBIOSFunction:
 	pushad
+	cmp	word [wDiskSectorSize], 512
+	jne	.AsGiven
+	shld	esi, eax, 2
+	shl	eax, 2
+	shl	ecx, 2
+	mov	edx, 512
+.AsGiven:
 
 	; Set initial 
 	mov 	word [DiskPackage.Segment], es
@@ -99,6 +110,36 @@ ReadFromDiskUsingExtendedBIOSFunction:
 ret
 	
 diskErrorMessage db 'Disk read error!', 0
+
+; **************************
+; DiskSectorSize
+; Asks the BIOS how big the boot disk's sectors are (int 13h, function
+; 48h): 2048 for a CD, 512 for a USB stick or a hard disk. Anything
+; else, or no answer, is taken as a CD's.
+; IN:
+;	- bPhysicalDriveNum: the boot disk
+; OUT:
+;	- wDiskSectorSize
+; **************************
+DiskSectorSize:
+	pushad
+	mov	word [DriveParameters], 0x1E
+	mov	ah, 0x48
+	mov	dl, byte [bPhysicalDriveNum]
+	mov	si, DriveParameters
+	int	0x13
+	jc	.Done
+	cmp	word [DriveParameters + 0x18], 512
+	jne	.Done
+	mov	word [wDiskSectorSize], 512
+.Done:
+	popad
+	ret
+
+; The boot disk's sector size, in bytes.
+wDiskSectorSize				dw 2048
+; What function 48h fills in: its size first, the sector size at 0x18.
+DriveParameters:			times 0x1E db 0
 
 ; This is used for the extended read function (int 0x13)
 DiskPackage:				db 0x10
