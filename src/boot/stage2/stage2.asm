@@ -100,7 +100,10 @@ stage2_entry:
     ;; We now have to get into the 32-bit land to copy the
     ;; kernel to 0x1000000, then get back to real mode,
     ;; to do other things.
-    ; Go, Go, Go
+    ; Go, Go, Go - with interrupts off: from the moment PE is set until
+    ; Temp32Bit, the IDT is still the real-mode one, and an interrupt
+    ; there is a triple fault (seen under KVM: TCG rarely hits the window)
+    cli
     mov eax, cr0
     or eax, 1
     mov cr0, eax
@@ -409,7 +412,9 @@ Temp16Bit:
     ;; Switch Video Mode
     call VesaFinish
 
-    ;; Goto Permanent Protected Mode!
+    ;; Goto Permanent Protected Mode! Interrupts off first, as above:
+    ;; VesaFinish ran with them on, and the IDT is still the real-mode one
+    cli
     mov eax, cr0
     or eax, 1
     mov cr0, eax
