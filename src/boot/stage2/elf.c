@@ -83,9 +83,11 @@ int load_elf32()
 		boot_print("[load_elf32], Bad e_phentsize.\n");
 		return 0;
 	}
+	/* Compared without adding to e_phoff, which can wrap past 4 GiB to a
+	 * small number and pass (host tests, K129). */
 	if (FileSize != 0 &&
-		(header->e_phoff + (unsigned int)header->e_phnum * header->e_phentsize)
-			> FileSize) {
+		(header->e_phoff > FileSize
+		 || (unsigned int)header->e_phnum * header->e_phentsize > FileSize - header->e_phoff)) {
 		boot_print("[load_elf32], Program headers run past end of file.\n");
 		return 0;
 	}
@@ -135,7 +137,8 @@ int load_elf32()
 			boot_print("[load_elf32], p_filesz > p_memsz.\n");
 			return 0;
 		}
-		if (FileSize != 0 && (phdr->p_offset + phdr->p_filesz) > FileSize) {
+		if (FileSize != 0 && (phdr->p_offset > FileSize
+				|| phdr->p_filesz > FileSize - phdr->p_offset)) {
 			boot_print("[load_elf32], Segment runs past end of file.\n");
 			return 0;
 		}
@@ -229,8 +232,9 @@ static int load_elf64(void)
 		boot_print("[load_elf64], Bad program header table.\n");
 		return 0;
 	}
-	if (FileSize != 0 && header->e_phoff
-			+ (unsigned long long)header->e_phnum * header->e_phentsize > FileSize) {
+	/* As in load_elf32: no addition that can wrap past 2^64. */
+	if (FileSize != 0 && (header->e_phoff > FileSize
+			|| (unsigned long long)header->e_phnum * header->e_phentsize > FileSize - header->e_phoff)) {
 		boot_print("[load_elf64], Program headers run past end of file.\n");
 		return 0;
 	}
@@ -263,7 +267,8 @@ static int load_elf64(void)
 		}
 
 		if (phdr->p_filesz > phdr->p_memsz
-			|| (FileSize != 0 && phdr->p_offset + phdr->p_filesz > FileSize)) {
+			|| (FileSize != 0 && (phdr->p_offset > FileSize
+				|| phdr->p_filesz > FileSize - phdr->p_offset))) {
 			boot_print("[load_elf64], Segment runs past end of file.\n");
 			return 0;
 		}

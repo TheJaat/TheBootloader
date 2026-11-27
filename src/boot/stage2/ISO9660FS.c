@@ -49,7 +49,7 @@ int iso9660_mount()
     {
         // Valid ISO9660 FS
         boot_print("[ISO9660-FS] Mount:: Root Directory Start Sector = ");
-        boot_print_hex(*(unsigned int *)pvd->root + 2);
+        boot_print_hex(((iso_9660_directory_entry_t *)pvd->root)->extent_start_LSB);
         boot_print("\n");
     }
     else
@@ -79,72 +79,6 @@ int iso9660_mount()
     return 0;
 }
 
-int nestedDirOffset = 0;
-// Opening a File
-vfs_node_t* iso9660_open1(const char* path) {
-
-boot_print("[ISO9660-FS] iso9660_open\n");
-    // Begin at the root directory.
-    // The root directory's starting sector and total size were stored by iso9660_mount.
-    unsigned int current_sector = iso_fs.root_dir_sector;
-    unsigned int remaining_bytes = iso_fs.root_dir_size;
-    boot_print("[ISO9660-FS] iso9660_open: current_sector = "); boot_print_hex(current_sector); boot_print("\n");
-    boot_print("[ISO9660-FS] iso9660_open: remaining_bytes = "); boot_print_hex(remaining_bytes); boot_print("\n");
-
-
-    // Iterate through each sector of the root directory.
-    unsigned int offset = 0;
-    while(remaining_bytes > 0) {
-        // Read one sector of the directory.
-        if (read_sector(current_sector, root_dir_entries) != 0)
-            return (void *)0;
-        while (offset < remaining_bytes)
-        {
-            iso_9660_directory_entry_t *dir = (iso_9660_directory_entry_t *)(root_dir_entries + offset);
-
-            boot_print("dir->length = ");
-            boot_print_hex(dir->length);
-            boot_print("\n");
-            if (dir->length == 0)
-            {
-                boot_print("Dead End \n");
-               
-                break;
-            }
-
-            char file_name[dir->name_len + 1];
-            memcpyb(file_name, dir->name, dir->name_len);
-            file_name[dir->name_len] = 0;
-            char *s = strchr(file_name, ';');
-            if (s)
-            {
-                *s = '\0';
-            }
-            // boot_print(path);
-            // boot_print("/");
-            boot_print(file_name);
-            boot_print("\n");
-
-            // Compare the file.
-            if (strcmp(file_name, path) == 0)
-            {
-                // Found the file.
-                boot_print("Found the File\n");
-            }
-            // If the entry is a directory
-            if (dir->flags & FLAG_DIRECTORY)
-            {
-            }
-
-
-            offset += dir->length;
-        }
-    }
-
-    // File not found.
-    return (void*)0;
-}
-
 // Returns a pointer to a newly allocated vfs_node_t if found,
 // or NULL if not found.
 vfs_node_t* iso9660_find_in_directory(unsigned int sector, unsigned int size, const char* name) {
@@ -168,6 +102,15 @@ vfs_node_t* iso9660_find_in_directory(unsigned int sector, unsigned int size, co
             
             // If length is 0, we've hit the end of valid records in this sector.
             if (dir->length == 0) {
+                break;
+            }
+            // A record too short for its own fields and name, or running
+            // past the sector's end, is damage: parsed, it would be read
+            // past itself. The sector's records end here (host tests,
+            // K129: a_damaged_record_ends_its_sector).
+            if (dir->length < sizeof(iso_9660_directory_entry_t) + dir->name_len
+                || offset + dir->length > ISO9660_SECTOR_SIZE) {
+                boot_print("[ISO9660-FS] A damaged directory record; the rest of this sector is skipped\n");
                 break;
             }
             
@@ -210,9 +153,12 @@ vfs_node_t* iso9660_find_in_directory(unsigned int sector, unsigned int size, co
             // Move to the next directory record within the sector.
             offset += dir->length;
         }
-        // Move on to the next sector in the directory data.
+        // Move on to the next sector in the directory data. The count is
+        // unsigned: a size that is not a whole number of sectors (a
+        // damaged disc) must stop at 0, not wrap to 4 GiB and read on
+        // (K129: a_directory_size_short_of_a_sector_ends_the_search).
         current_sector++;
-        remaining_bytes -= ISO9660_SECTOR_SIZE;
+        remaining_bytes = remaining_bytes > ISO9660_SECTOR_SIZE ? remaining_bytes - ISO9660_SECTOR_SIZE : 0;
     }
     return (void*)0;
 }
@@ -251,8 +197,14 @@ vfs_node_t* iso9660_open(const char* path) {
     const char* p = path;
     while (*p) {
         int i = 0;
-        // Extract the next token from the path.
+        // Extract the next token from the path. A name longer than the
+        // buffer is refused: copied in whole, it ran over the stack
+        // (K129: a_long_name_in_a_path_is_refused).
         while (*p && *p != '/') {
+            if (i == (int)sizeof(token) - 1) {
+                boot_print("[ISO9660-FS] iso9660_open: name too long\n");
+                return (void*)0;
+            }
             token[i++] = *p;
             p++;
         }
@@ -287,71 +239,6 @@ vfs_node_t* iso9660_open(const char* path) {
     return current;
 }
 
-vfs_node_t* iso9660_open_old(const char* path) {
-    boot_print("[ISO9660-FS] iso9660_open\n");
-    
-    // Begin at the root directory.
-    unsigned int current_sector = iso_fs.root_dir_sector;
-    unsigned int remaining_bytes = iso_fs.root_dir_size;
-    boot_print("[ISO9660-FS] iso9660_open: current_sector = "); boot_print_hex(current_sector); boot_print("\n");
-    boot_print("[ISO9660-FS] iso9660_open: remaining_bytes = "); boot_print_hex(remaining_bytes); boot_print("\n");
-
-    // Iterate through each sector of the root directory.
-    while (remaining_bytes > 0) {
-        if (read_sector(current_sector, root_dir_entries) != 0)
-            return (void*)0;
-        
-        unsigned int offset = 0;
-        while (offset < ISO9660_SECTOR_SIZE && offset < remaining_bytes) {
-            iso_9660_directory_entry_t *dir = (iso_9660_directory_entry_t *)(root_dir_entries + offset);
-
-            if (dir->length == 0) {
-                boot_print("Dead End \n");
-                break;
-            }
-
-            char file_name[dir->name_len + 1];
-            memcpyb(file_name, dir->name, dir->name_len);
-            file_name[dir->name_len] = '\0';
-            
-            char *s = strchr(file_name, ';');
-            if (s) {
-                *s = '\0';
-            }
-
-            boot_print(file_name);
-            boot_print("\n");
-
-            // Compare the file name with the requested path.
-            if (strcmp(file_name, path) == 0) {
-                boot_print("Found the File\n");
-                
-                vfs_node_t* node = (vfs_node_t*) stage2_malloc(sizeof(vfs_node_t));
-                if (!node) {
-                    boot_print("Out of memory\n");
-                    return (void*)0;
-                }
-                
-                strncpy(node->name, file_name, sizeof(node->name));
-                node->sector = dir->extent_start_LSB;
-                node->size = dir->extent_length_LSB;
-                node->is_directory = (dir->flags & FLAG_DIRECTORY) ? 1 : 0;
-                node->next = (void*)0;
-                return node;
-            }
-
-            offset += dir->length;
-        }
-
-        // Move to the next sector
-        current_sector++;
-        remaining_bytes -= ISO9660_SECTOR_SIZE;
-    }
-
-    // File not found.
-    return (void*)0;
-}
-
 int iso9660_read(vfs_node_t* node, void* buffer, unsigned int size, unsigned int offset) {
     if (!node || !buffer) return -1; // Invalid input
 
@@ -360,8 +247,10 @@ int iso9660_read(vfs_node_t* node, void* buffer, unsigned int size, unsigned int
     // Ensure offset is within file bounds
     if (offset >= node->size) return 0;
 
-    // Adjust size if it exceeds file size
-    if (offset + size > node->size) {
+    // Adjust size if it exceeds file size. Compared without adding:
+    // offset + size can wrap past 4 GiB to a small number, and the read
+    // then runs past the caller's buffer (K129: reads_any_part_of_a_file).
+    if (size > node->size - offset) {
         size = node->size - offset;
     }
 
@@ -390,50 +279,6 @@ int iso9660_read(vfs_node_t* node, void* buffer, unsigned int size, unsigned int
     return bytes_read;
 }
 
-
-
-void iso9660_list2(const char* path) {
-    boot_print("[ISO9660-FS] Listing directory: ");
-    boot_print(path);
-    boot_print("\n");
-
-    // unsigned char *sector_buffer = (unsigned char *)0x0500; // Buffer for reading sectors
-    unsigned int current_sector = iso_fs.root_dir_sector;
-    unsigned int remaining_bytes = iso_fs.root_dir_size;
-
-    while (remaining_bytes > 0) {
-        if (read_sector(current_sector, root_dir_entries) != 0) {
-            boot_print("[ISO9660-FS] Error reading sector\n");
-            return;
-        }
-
-        unsigned char *ptr = root_dir_entries;
-        while (ptr < root_dir_entries + ISO9660_SECTOR_SIZE) {
-            unsigned char record_length = ptr[0];
-            if (record_length == 0) {
-                boot_print("[ISO9660-FS] No more records in this sector\n");
-                break;
-            }
-
-            unsigned char name_length = ptr[32];
-            char filename[128] = {0};
-            memcpy(filename, ptr + 33, name_length);
-            filename[name_length] = '\0';
-
-            char *semicolon = strchr(filename, ';');
-            if (semicolon) *semicolon = '\0'; // Remove version number
-
-            boot_print("[ISO9660-FS] File: ");
-            boot_print(filename);
-            boot_print("\n");
-
-            ptr += record_length;
-        }
-
-        current_sector++;
-        remaining_bytes -= ISO9660_SECTOR_SIZE;
-    }
-}
 
 
 void iso9660_list(const char* path) {

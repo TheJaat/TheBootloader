@@ -1,6 +1,6 @@
 # Root Makefile
 
-.PHONY: all tools run clean run-revision
+.PHONY: all tools run clean run-revision test
 
 # Subdirectories
 SUBDIRS = src
@@ -84,3 +84,9 @@ clean:
 	# $(MAKE) -C src clean
 	rm -rf $(ISO_DIR)
 	@rm -rf $(BUILD_DIR)
+
+# Host tests of stage 2's C code - the ISO reader, the ELF loader, the
+# long-mode page tables (K129). ISO= and KERNEL= add checks against a
+# real ISO and the kernel on it; TheTaaJ's stage2-test passes both.
+test:
+	$(MAKE) -C tests ROOT_DIR=$(ROOT_DIR) ISO="$(ISO)" KERNEL="$(KERNEL)"
