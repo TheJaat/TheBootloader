@@ -72,6 +72,7 @@ endstruc
 ; MultiBoot Header
 ; ________________________________
 align 32
+global BootHeader       ; elf.c reads the memory map from it (K130)
 BootHeader:
 istruc MultiBoot
 	at MultiBoot.Flags,			dd 0

@@ -188,26 +188,78 @@ int load_elf32()
 #define KERNEL_WINDOW      0xFFFFFFFF80000000ULL
 #define KERNEL_WINDOW_SIZE 0x40000000ULL        /* 1 GiB */
 
-/* A 64-bit kernel may fill everything from 1 MiB up to the staging
- * buffer its file is being copied *from*: a segment reaching that far
- * would overwrite the part of the file not copied yet.
- *
- * It used to stop a megabyte earlier, at RAMDISK_LOAD_ADDRESS, because
- * load_ramdisk() runs after this and wrote there. For a 64-bit kernel
- * the ramdisk now goes into the staging buffer instead - free by then,
- * the kernel having been copied out of it (see load_ramdisk in vfs.c).
- * The 32-bit kernel is loaded exactly as before: it has those two
- * addresses compiled in. */
-#define LOAD_MAX_ADDRESS   KERNEL_ELF_READ
+/* A 64-bit kernel's segments may go anywhere from 1 MiB up to 1 GiB:
+ * the kernel window maps 1 GiB, and an identity-mapped one stays below it
+ * too, so that every address here fits the 32-bit pointers this code runs
+ * with. Within that, only memory the firmware calls usable (K130). */
+#define LOAD_MAX_ADDRESS   KERNEL_WINDOW_SIZE
 
 /* Set by load_elf64, read by stage2.asm and longmode.c. */
 unsigned int       g_kernelIs64;
 unsigned long long g_kernelEntry64;
 unsigned long long g_kernelVirtual;     /* virtual address of g_kernelAddress */
 
+/* The kernel file's first 64 bytes, read by load_kernel (vfs.c): its ELF
+ * header, whichever class. */
+unsigned char g_kernelHead[64];
+
+/* vfs.c: `size` bytes of the kernel's file from `offset` into `dest`; the
+ * count read, or -1. The host tests give their own (K130). */
+int kernel_read(void *dest, unsigned int size, unsigned int offset);
+
+/* stage2.asm's MultiBoot structure: the firmware's memory map, as
+ * LoadMemoryMap stored it in real mode (longmode.c reads the same). */
+extern unsigned char BootHeader[];
+#define MB_MEMMAP_LENGTH (11 * 4)
+#define MB_MEMMAP_ADDR   (12 * 4)
+
+/* Whether [base, end) is all in memory the firmware calls usable (E820
+ * type 1): a kernel segment or a ramdisk put anywhere else would land on
+ * a device, ACPI's tables or a hole. Regions next to each other count as
+ * one; anything overlapping a region not usable fails. */
+int usable_memory(unsigned long long base, unsigned long long end)
+{
+    typedef struct {
+        unsigned long long Base, Length;
+        unsigned int Type, Acpi, Pad[2];
+    } E820;
+    const E820 *map = (const E820 *)*(unsigned int *)(BootHeader + MB_MEMMAP_ADDR);
+    unsigned int count = *(unsigned int *)(BootHeader + MB_MEMMAP_LENGTH);
+    unsigned long long at = base;
+
+    if (end <= base) {
+        return end == base;
+    }
+    /* Walk forward from `base`: each step, a usable region holding `at`
+     * moves it to that region's end. At most `count` steps. */
+    for (unsigned int step = 0; step <= count && at < end; step++) {
+        int moved = 0;
+        for (unsigned int i = 0; i < count; i++) {
+            unsigned long long rbase = map[i].Base, rend = map[i].Base + map[i].Length;
+            if (map[i].Type == 1 && rbase <= at && at < rend) {
+                at = rend;
+                moved = 1;
+            }
+        }
+        if (!moved) {
+            return 0;
+        }
+    }
+    if (at < end) {
+        return 0;
+    }
+    for (unsigned int i = 0; i < count; i++) {
+        unsigned long long rbase = map[i].Base, rend = map[i].Base + map[i].Length;
+        if (map[i].Type != 1 && rbase < end && base < rend) {
+            return 0; /* a region also called something else */
+        }
+    }
+    return 1;
+}
+
 static int load_elf64(void)
 {
-	Elf64_Header *header = (Elf64_Header *)KERNEL_ELF_READ;
+	Elf64_Header *header = (Elf64_Header *)g_kernelHead;
 	unsigned int  FileSize = (unsigned int)g_kernelSize;
 	unsigned long long Lowest = ~0ULL, Highest = 0, LowestVirtual = 0;
 	int Loaded = 0, EntryFound = 0;
@@ -232,15 +284,22 @@ static int load_elf64(void)
 		return 0;
 	}
 	/* As in load_elf32: no addition that can wrap past 2^64. */
-	if (FileSize != 0 && (header->e_phoff > FileSize
-			|| (unsigned long long)header->e_phnum * header->e_phentsize > FileSize - header->e_phoff)) {
+	if (header->e_phoff > FileSize
+			|| (unsigned long long)header->e_phnum * header->e_phentsize > FileSize - header->e_phoff) {
 		boot_print("[load_elf64], Program headers run past end of file.\n");
 		return 0;
 	}
 
 	for (int i = 0; i < header->e_phnum; i++) {
-		Elf64_Phdr *phdr = (Elf64_Phdr *)((unsigned char *)header
-			+ (unsigned int)header->e_phoff + i * header->e_phentsize);
+		/* One program header at a time, from the file: the table may be
+		 * anywhere in it, and no buffer holds the file any more. */
+		Elf64_Phdr ph;
+		unsigned int at = (unsigned int)header->e_phoff + (unsigned int)i * header->e_phentsize;
+		if (kernel_read(&ph, sizeof(ph), at) != (int)sizeof(ph)) {
+			boot_print("[load_elf64], A program header could not be read.\n");
+			return 0;
+		}
+		Elf64_Phdr *phdr = &ph;
 		unsigned long long Dest = phdr->p_paddr;
 		unsigned long long End  = Dest + phdr->p_memsz;
 
@@ -248,11 +307,10 @@ static int load_elf64(void)
 			continue;
 		}
 
-		/* Physical placement: above the loader, below the staging buffer. Both
-		 * bounds are far below 4 GiB, so every value below fits in the
-		 * 32-bit pointers this code runs with. */
+		/* Above the loader, below 1 GiB (K130: it was below the 3 MiB
+		 * where the whole file used to be staged). */
 		if (End < Dest || Dest < LOAD_MIN_ADDRESS || End > LOAD_MAX_ADDRESS) {
-			boot_print("[load_elf64], Segment outside 1 MiB .. 3 MiB, refusing.\n");
+			boot_print("[load_elf64], Segment outside 1 MiB .. 1 GiB, refusing.\n");
 			return 0;
 		}
 
@@ -272,9 +330,19 @@ static int load_elf64(void)
 			return 0;
 		}
 
-		memcpyb((void *)(unsigned int)Dest,
-			(unsigned char *)KERNEL_ELF_READ + (unsigned int)phdr->p_offset,
-			(unsigned int)phdr->p_filesz);
+		if (!usable_memory(Dest, End)) {
+			boot_print("[load_elf64], Segment is not all in usable memory, refusing.\n");
+			return 0;
+		}
+
+		/* Its bytes straight from the file to their place, then the rest
+		 * of the segment (its .bss) zeroed. */
+		if (phdr->p_filesz != 0
+			&& kernel_read((void *)(unsigned int)Dest, (unsigned int)phdr->p_filesz,
+			               (unsigned int)phdr->p_offset) != (int)phdr->p_filesz) {
+			boot_print("[load_elf64], A segment could not be read.\n");
+			return 0;
+		}
 		memsetb((void *)(unsigned int)(Dest + phdr->p_filesz), 0,
 			(int)(phdr->p_memsz - phdr->p_filesz));
 
@@ -318,7 +386,9 @@ static int load_elf64(void)
  * long-mode path. Returns 1 on success, 0 on failure. */
 int load_elf(void)
 {
-	unsigned char *ident = (unsigned char *)KERNEL_ELF_READ;
+	/* The header load_kernel read (K130); for a 32-bit kernel the same
+	 * bytes are also at the start of the staged file. */
+	unsigned char *ident = g_kernelHead;
 
 	g_kernelIs64 = 0;
 

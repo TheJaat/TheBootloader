@@ -271,6 +271,67 @@ unsigned int bios_read(unsigned int lba, unsigned int count)
 
 /* elf.c reads it; vfs.c, not built here, sets it. */
 int g_kernelSize;
+
+/* ---- the kernel's file, and the memory map (K130) ------------------------- */
+
+uint8_t *kernel_file;
+uint32_t kernel_file_size;
+int32_t  kernel_fail_at = -1;
+uint32_t kernel_reads;
+
+/* vfs.c's: bytes of the kernel's file into place. As iso9660_read: cut at
+ * the file's end, 0 from past it, -1 on a read error. */
+int kernel_read(void *dest, unsigned int size, unsigned int offset)
+{
+    kernel_reads++;
+    if (!kernel_file) {
+        return -1;
+    }
+    if (offset >= kernel_file_size) {
+        return 0;
+    }
+    if (size > kernel_file_size - offset) {
+        size = kernel_file_size - offset;
+    }
+    if (kernel_fail_at >= 0 && (uint32_t)kernel_fail_at >= offset && (uint32_t)kernel_fail_at < offset + size) {
+        return -1;
+    }
+    copy_bytes(dest, kernel_file + offset, size);
+    return (int)size;
+}
+
+/* stage2.asm's MultiBoot structure, as far as elf.c reads it: the count
+ * of E820 entries at 11 * 4, their address at 12 * 4. Each entry as
+ * LoadMemoryMap stores it: 24 bytes, padded to 32. */
+unsigned char BootHeader[0x60] __attribute__((aligned(32)));
+static struct {
+    uint64_t base, length;
+    uint32_t type, acpi, pad[2];
+} e820[32];
+
+void memory_map(const MemoryRegion *regions, uint32_t count)
+{
+    set_bytes(e820, 0, sizeof e820);
+    for (uint32_t i = 0; i < count && i < 32; i++) {
+        e820[i].base = regions[i].base;
+        e820[i].length = regions[i].length;
+        e820[i].type = regions[i].type;
+    }
+    *(uint32_t *)(BootHeader + 11 * 4) = count;
+    *(uint32_t *)(BootHeader + 12 * 4) = (uint32_t)e820;
+}
+
+void memory_map_default(void)
+{
+    static const MemoryRegion pc[] = {
+        { 0, 0x9FC00, 1 },
+        { 0x9FC00, 0x400, 2 },
+        { 0xF0000, 0x10000, 2 },
+        { 0x100000, 0x1FF00000, 1 },
+        { 0xFFFC0000, 0x40000, 2 },
+    };
+    memory_map(pc, sizeof pc / sizeof pc[0]);
+}
 /* longmode.c reads these; vfs.c sets them. */
 unsigned int g_ramdiskAddress;
 int g_ramdiskSize;

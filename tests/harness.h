@@ -97,6 +97,25 @@ extern int g_kernelSize;
 extern unsigned int g_ramdiskAddress;
 extern int g_ramdiskSize;
 
+/* ---- the kernel's file, as vfs.c reads it (K130) ------------------------ */
+
+/* What kernel_read reads: `kernel_file_size` bytes at `kernel_file`. A
+ * read touching byte `kernel_fail_at` fails (-1: none). */
+extern uint8_t *kernel_file;
+extern uint32_t kernel_file_size;
+extern int32_t  kernel_fail_at;
+extern uint32_t kernel_reads;
+
+/* The firmware's memory map in BootHeader, as stage2.asm stores it: set
+ * whole by memory_map, or the PC's usual by memory_map_default (usable
+ * below 640 KiB and from 1 MiB to 512 MiB, the BIOS's area reserved). */
+typedef struct {
+    uint64_t base, length;
+    uint32_t type;
+} MemoryRegion;
+void memory_map(const MemoryRegion *regions, uint32_t count);
+void memory_map_default(void);
+
 /* ---- the suites ------------------------------------------------------ */
 
 void iso_tests(const char *real_iso);
