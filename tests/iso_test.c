@@ -349,6 +349,98 @@ static void reads_any_part_of_a_file(void)
     CHECK(iso9660_read(kernel, buffer, KERNEL_SIZE, 0) == -1, "a sector that cannot be read: an error");
 }
 
+/* ---- reading many sectors at once (K131) -------------------------------- */
+
+/* A kernel-sized file: 100 sectors, the last one part full, at sector 50
+ * of a 160-sector volume. */
+#define BIG_EXTENT 50
+#define BIG_SECTORS 100
+#define BIG_SIZE (BIG_SECTORS * SECTOR - 7)
+
+static vfs_node_t *big_file(void)
+{
+    image_new(160);
+    volume(ROOT, SECTOR);
+    uint8_t *root = sector_at(ROOT);
+    uint32_t at = dots(root, ROOT, ROOT, SECTOR);
+    record(root + at, "BIG.ELF;1", 9, BIG_EXTENT, BIG_SIZE, 0);
+    file_bytes(BIG_EXTENT, BIG_SIZE);
+    iso9660_mount();
+    return iso9660_open("/BIG.ELF");
+}
+
+static int matches(const uint8_t *got, uint32_t offset, uint32_t count)
+{
+    for (uint32_t i = 0; i < count; i++) {
+        if (got[i] != pattern(BIG_EXTENT, offset + i)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void a_big_read_takes_few_bios_calls(void)
+{
+    vfs_node_t *big = big_file();
+    CHECK(big != 0, "the big file opens");
+    if (!big) {
+        return;
+    }
+    uint8_t *buffer = allocate(BIG_SECTORS * SECTOR);
+    disk_reads = 0;
+    disk_most = 0;
+    CHECK(iso9660_read(big, buffer, BIG_SIZE, 0) == (int)BIG_SIZE, "the whole file");
+    CHECK(matches(buffer, 0, BIG_SIZE), "every byte from its place");
+    /* 99 whole sectors, 16 per call: 7 calls; and the part-full last one. */
+    CHECK(disk_reads == 8, "99 whole sectors in 7 BIOS calls of up to 16, and 1 for the last part - not 100");
+    CHECK(disk_most == 16, "16 sectors per call at most");
+    CHECK(!disk_broke_rule, "no call a BIOS would refuse");
+
+    /* From the middle of a sector, to the middle of another. */
+    set_bytes(buffer, 0, BIG_SECTORS * SECTOR);
+    disk_reads = 0;
+    CHECK(iso9660_read(big, buffer, 40 * SECTOR, 3 * SECTOR + 100) == 40 * SECTOR, "40 sectors' worth from inside a sector");
+    CHECK(matches(buffer, 3 * SECTOR + 100, 40 * SECTOR), "the right bytes");
+    CHECK(disk_reads == 1 + 3 + 1, "a first part, 39 whole sectors in 3 calls, a last part");
+}
+
+static void a_stick_reads_its_512_byte_sectors_the_same_way(void)
+{
+    vfs_node_t *big = big_file();
+    if (!big) {
+        CHECK(0, "the big file opens");
+        return;
+    }
+    wDiskSectorSize = 512;
+    uint8_t *buffer = allocate(BIG_SECTORS * SECTOR);
+    disk_reads = 0;
+    CHECK(iso9660_read(big, buffer, BIG_SIZE, 0) == (int)BIG_SIZE && matches(buffer, 0, BIG_SIZE),
+          "the whole file from a disk of 512-byte sectors");
+    CHECK(disk_reads == 8, "the same 8 calls: 64 of its sectors each");
+    CHECK(!disk_broke_rule, "64 sectors of 512 bytes: below the 127 a BIOS takes per call");
+}
+
+static void a_sector_that_fails_once_is_read_again(void)
+{
+    vfs_node_t *big = big_file();
+    if (!big) {
+        CHECK(0, "the big file opens");
+        return;
+    }
+    uint8_t *buffer = allocate(BIG_SECTORS * SECTOR);
+    /* A USB stick's first read can fail while the BIOS wakes it: the call
+     * that holds sector 80 fails once, and is made again. */
+    disk_fail_at = BIG_EXTENT + 30;
+    disk_fail_times = 1;
+    CHECK(iso9660_read(big, buffer, BIG_SIZE, 0) == (int)BIG_SIZE && matches(buffer, 0, BIG_SIZE),
+          "a read that fails once succeeds the second time");
+    disk_fail_at = BIG_EXTENT + 30;
+    disk_fail_times = -1;
+    printed_clear();
+    CHECK(iso9660_read(big, buffer, BIG_SIZE, 0) == -1, "one that fails every time fails the read");
+    CHECK(printed_contains("could not read sectors from"), "and says where");
+}
+
 static void a_real_iso(const char *path)
 {
     if (!path) {
@@ -389,6 +481,9 @@ void iso_tests(const char *real_iso)
     a_directory_size_short_of_a_sector_ends_the_search();
     a_damaged_record_ends_its_sector();
     reads_any_part_of_a_file();
+    a_big_read_takes_few_bios_calls();
+    a_stick_reads_its_512_byte_sectors_the_same_way();
+    a_sector_that_fails_once_is_read_again();
     a_real_iso(real_iso);
     /* Last: before its fix it overran the stack, and the run ended. */
     a_long_name_in_a_path_is_refused();

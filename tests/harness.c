@@ -218,25 +218,54 @@ void boot_print_hex(unsigned int value)
 uint8_t *disk;
 uint32_t disk_sectors;
 uint32_t disk_reads;
+uint32_t disk_most;
+int      disk_broke_rule;
 int32_t  disk_fail_at = -1;
+int32_t  disk_fail_times = -1;
+unsigned short wDiskSectorSize = 2048;
 
 void disk_use(uint8_t *image, uint32_t sectors)
 {
     disk = image;
     disk_sectors = sectors;
     disk_reads = 0;
+    disk_most = 0;
+    disk_broke_rule = 0;
     disk_fail_at = -1;
+    disk_fail_times = -1;
+    wDiskSectorSize = 2048;
 }
 
-/* bios_disk.h: one 2048-byte sector, 0 on success. Past the image's end
- * is a read error, as on a real disc. */
-int read_sector(unsigned int lba, unsigned char *buffer)
+#define BIOS_BUFFER 0x60000u
+
+/* stage2.asm's bios_read: `count` of the disk's own sectors (2048 or 512
+ * bytes) from `lba`, into the BIOS buffer; 0, or a BIOS error code. Past
+ * the image's end is an error, as on a real disc; so is a sector told to
+ * fail. A call a real BIOS would refuse is done anyway, and noted. */
+unsigned int bios_read(unsigned int lba, unsigned int count)
 {
+    uint32_t size = wDiskSectorSize;
+    uint32_t start = lba * size, bytes = count * size;
     disk_reads++;
-    if (lba >= disk_sectors || (int32_t)lba == disk_fail_at) {
-        return 1;
+    if (count == 0 || count > 127 || bytes > 0x20000u
+        || (BIOS_BUFFER >> 16) != ((BIOS_BUFFER + bytes - 1) >> 16)) {
+        disk_broke_rule = 1;
     }
-    copy_bytes(buffer, disk + lba * SECTOR, SECTOR);
+    uint32_t first = start / SECTOR, last = (start + bytes - 1) / SECTOR;
+    if (last >= disk_sectors) {
+        return 0x04; /* sector not found */
+    }
+    if (disk_fail_at >= 0 && (uint32_t)disk_fail_at >= first && (uint32_t)disk_fail_at <= last
+        && disk_fail_times != 0) {
+        if (disk_fail_times > 0) {
+            disk_fail_times--;
+        }
+        return 0x04;
+    }
+    if (last - first + 1 > disk_most) {
+        disk_most = last - first + 1;
+    }
+    copy_bytes((void *)BIOS_BUFFER, disk + start, bytes);
     return 0;
 }
 
@@ -254,7 +283,7 @@ int run(int argc, char **argv)
     int32_t at = sys(SYS_MMAP2, LOW_MEMORY_START, LOW_MEMORY_END - LOW_MEMORY_START, PROT_READ_WRITE,
                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
     if (at != (int32_t)LOW_MEMORY_START) {
-        out("harness: could not map stage 2's addresses 0x80000-0x1000000\n");
+        out("harness: could not map stage 2's addresses 0x60000-0x1000000\n");
         return 2;
     }
 

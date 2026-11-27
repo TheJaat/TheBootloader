@@ -254,28 +254,48 @@ int iso9660_read(vfs_node_t* node, void* buffer, unsigned int size, unsigned int
         size = node->size - offset;
     }
 
+    /* A part of the first sector, if the read starts inside one or is
+     * shorter than one; then every whole sector at once, straight into
+     * the caller's buffer, many per BIOS call (K131: one sector per call
+     * was most of an emulated boot); then a part of the last. */
     unsigned int sector = node->sector + (offset / ISO9660_SECTOR_SIZE);
-    unsigned int sector_offset = offset % ISO9660_SECTOR_SIZE;
-    unsigned int bytes_read = 0;
+    unsigned int skip = offset % ISO9660_SECTOR_SIZE;
+    unsigned char *out = (unsigned char *)buffer;
+    unsigned int left = size;
     unsigned char sector_buffer[ISO9660_SECTOR_SIZE];
 
-    while (bytes_read < size) {
+    if (left > 0 && (skip != 0 || left < ISO9660_SECTOR_SIZE)) {
         if (read_sector(sector, sector_buffer) != 0) {
             boot_print("Error reading sector\n");
             return -1;
         }
-
-        unsigned int chunk_size = ISO9660_SECTOR_SIZE - sector_offset;
-        if (chunk_size > (size - bytes_read)) {
-            chunk_size = size - bytes_read;
+        unsigned int chunk = ISO9660_SECTOR_SIZE - skip;
+        if (chunk > left) {
+            chunk = left;
         }
-
-        memcpy((char*)buffer + bytes_read, sector_buffer + sector_offset, chunk_size);
-        bytes_read += chunk_size;
+        memcpy(out, sector_buffer + skip, chunk);
+        out += chunk;
+        left -= chunk;
         sector++;
-        sector_offset = 0; // Only applies to first sector
     }
-
+    if (left >= ISO9660_SECTOR_SIZE) {
+        unsigned int whole = left / ISO9660_SECTOR_SIZE;
+        if (read_sectors(sector, whole, out) != 0) {
+            boot_print("Error reading sector\n");
+            return -1;
+        }
+        out += whole * ISO9660_SECTOR_SIZE;
+        left -= whole * ISO9660_SECTOR_SIZE;
+        sector += whole;
+    }
+    if (left > 0) {
+        if (read_sector(sector, sector_buffer) != 0) {
+            boot_print("Error reading sector\n");
+            return -1;
+        }
+        memcpy(out, sector_buffer, left);
+    }
+    unsigned int bytes_read = size;
     return bytes_read;
 }
 

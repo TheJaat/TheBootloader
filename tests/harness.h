@@ -15,9 +15,11 @@
  * only addresses stage 2 reads that a test cannot give it - so FindRsdp
  * is the one function here not run whole; its checksum test is.
  *
- * What touches hardware is replaced: read_sector reads from a disk image
- * in memory, and boot_print keeps what is printed, so that a test can
- * check which message a refusal printed. */
+ * What touches hardware is replaced: bios_read - stage2.asm's trip to
+ * real mode for int 13h - reads from a disk image in memory into the
+ * BIOS buffer at 0x60000, as the BIOS would (K131: so bios_disk.c's own
+ * reading is tested too); and boot_print keeps what is printed, so that
+ * a test can check which message a refusal printed. */
 
 #ifndef HARNESS_H
 #define HARNESS_H
@@ -27,7 +29,7 @@
 
 /* The low memory every test may use: everything stage 2's C code touches
  * at a fixed address, and room for the kernel file. */
-#define LOW_MEMORY_START 0x80000u
+#define LOW_MEMORY_START 0x60000u     /* the BIOS buffer */
 #define LOW_MEMORY_END   0x1000000u     /* 16 MiB */
 
 /* ---- output ---------------------------------------------------------- */
@@ -58,14 +60,22 @@ void check_failed(const char *file, int line, const char *what, const char *why)
 void printed_clear(void);
 int printed_contains(const char *text);
 
-/* ---- the disk read_sector reads -------------------------------------- */
+/* ---- the disk bios_read reads ------------------------------------------ */
 
 #define SECTOR 2048u
 
-extern uint8_t *disk;            /* the image, `disk_sectors` long      */
+extern uint8_t *disk;            /* the image, `disk_sectors` ISO sectors */
 extern uint32_t disk_sectors;
-extern uint32_t disk_reads;      /* read_sector calls since disk_use     */
-extern int32_t  disk_fail_at;    /* this sector fails to read; -1: none  */
+extern uint32_t disk_reads;      /* bios_read calls since disk_use       */
+extern uint32_t disk_most;       /* the most ISO sectors one call read   */
+extern int      disk_broke_rule; /* a call the BIOS would refuse: more
+                                  * than 127 sectors, past the buffer's
+                                  * 128 KiB, or across a 64 KiB block    */
+extern int32_t  disk_fail_at;    /* this ISO sector fails to read; -1: none */
+extern int32_t  disk_fail_times; /* how often it fails; -1: every time   */
+/* The disk's own sector size, as stage2.asm asks the BIOS: 2048 for a
+ * CD, 512 for a stick (bios_disk.c reads this). */
+extern unsigned short wDiskSectorSize;
 
 void disk_use(uint8_t *image, uint32_t sectors);
 

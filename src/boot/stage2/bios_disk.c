@@ -33,18 +33,42 @@ extern unsigned short wDiskSectorSize;
 #define BIOS_BUFFER ((unsigned char *)0x60000)
 #define ISO_SECTOR 2048
 
-int read_sector(unsigned int lba, unsigned char *buffer) {
+/* The most ISO sectors one int 13h call reads (K131). Every call costs
+ * the trip to real mode and back - cheap on a PC, expensive emulated:
+ * one sector at a time, the kernel's 830 sectors took most of an
+ * emulated boot (K51, entry 105). Sixteen is 32 KiB: within the BIOS
+ * buffer (0x60000 up to the ISO reader's buffers at 0x80000), inside one
+ * 64 KiB block, as some BIOSes need for their DMA, and 64 of a stick's
+ * 512-byte sectors - below the 127 many BIOSes take at most per call. */
+#define READ_MAX 16
+
+/* `count` ISO sectors (2048 bytes each) of the boot disk from `lba`, into
+ * `buffer`: as few BIOS calls as READ_MAX allows. 0, or -1 if the BIOS
+ * could not read one of them. */
+int read_sectors(unsigned int lba, unsigned int count, unsigned char *buffer) {
     unsigned int per = ISO_SECTOR / (wDiskSectorSize == 512 ? 512 : ISO_SECTOR);
-    /* Twice before giving up: the first read of a USB device sometimes
-     * fails while the BIOS's driver is still waking it. */
-    for (int attempt = 0; attempt < 2; attempt++) {
-        if (bios_read(lba * per, per) == 0) {
-            memcpy(buffer, BIOS_BUFFER, ISO_SECTOR);
-            return 0;
+    while (count > 0) {
+        unsigned int n = count < READ_MAX ? count : READ_MAX;
+        int read = 0;
+        /* Twice before giving up: the first read of a USB device sometimes
+         * fails while the BIOS's driver is still waking it. */
+        for (int attempt = 0; attempt < 2 && !read; attempt++) {
+            read = bios_read(lba * per, n * per) == 0;
         }
+        if (!read) {
+            boot_print("[DISK] the BIOS could not read sectors from ");
+            boot_print_hex(lba);
+            boot_print("\n");
+            return -1;
+        }
+        memcpy(buffer, BIOS_BUFFER, (int)(n * ISO_SECTOR));
+        buffer += n * ISO_SECTOR;
+        lba += n;
+        count -= n;
     }
-    boot_print("[DISK] the BIOS could not read sector ");
-    boot_print_hex(lba);
-    boot_print("\n");
-    return -1;
+    return 0;
+}
+
+int read_sector(unsigned int lba, unsigned char *buffer) {
+    return read_sectors(lba, 1, buffer);
 }

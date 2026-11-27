@@ -19,7 +19,7 @@ STAGE2 = $(ROOT_DIR)/src/boot/stage2
 INCLUDES = -I $(ROOT_DIR)/$(BOOT_STAGE2_C_INCLUDE) -I $(ROOT_DIR)/$(BOOT_STAGE2_C_STD_INCLUDE) -I $(ROOT_DIR)/$(HEADERS)
 
 # Stage 2's files exactly as stage 2 compiles them (its Makefile's flags).
-UNDER_TEST = ISO9660FS mem elf
+UNDER_TEST = ISO9660FS mem elf bios_disk
 # The tests themselves: warnings on, and the same target and freedom.
 TEST_FLAGS = $(GCC_FLAGS) -Wall -Wno-pointer-sign -Wno-discarded-qualifiers -O1 -g
 
