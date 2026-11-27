@@ -42,6 +42,10 @@ jmp stage2_entry
 
 stage2_entry:
 
+    ;; The boot log's first line (K23): the firmware and stage 1 are done.
+    mov si, sMarkStarted
+    call SerialMark16
+
     mov si, WelcomeToStage2            ; Print Stage 2 Welcome message
     call PrintString16BIOS
     call PrintNewline                  ; \n
@@ -93,7 +97,11 @@ stage2_entry:
 
     ;; -------------------------------------------------------------------
     ;; Get Best Video Mode and its information
+    mov si, sMarkVesa
+    call SerialMark16
     call VesaSetup
+    mov si, sMarkVesaDone
+    call SerialMark16
     ;; -------------------------------------------------------------------
 
     ;; -------------------------------------------------------------------
@@ -197,6 +205,8 @@ Temp32Bit:
     ;;        - 0: Failure, Kernel either not found or not loaded.
     cmp eax, 1               ; Success kernel was found and loaded
     jne ErrorLoadingKernel   ; Display error string of kernel loading failure
+    mov esi, sMarkKernelRead
+    call SerialMark32
 
     ;; Here, kernel was loaded successfully
 
@@ -223,6 +233,8 @@ Temp32Bit:
     ;;      - if 1 - success
     jne ELFParseLoadingError
     ;; loading successful
+    mov esi, sMarkKernelLoaded
+    call SerialMark32
 
     ;; Get the kernel load address from the g_kernelAddress variable
     ;; declared and assigned value in elf.c
@@ -237,6 +249,8 @@ Temp32Bit:
     mov  si, sRamdiskFailed
     call PrintString32
     .RamdiskOk:
+    mov esi, sMarkRamdisk
+    call SerialMark32
 
     mov dword eax, [g_ramdiskAddress]
     mov dword [BootDescriptor + OsBootDescriptor.RamDiskAddr], eax
@@ -410,6 +424,8 @@ Temp16Bit:
     sti
 
     ;; Switch Video Mode
+    mov si, sMarkMode
+    call SerialMark16
     call VesaFinish
 
     ;; Goto Permanent Protected Mode! Interrupts off first, as above:
@@ -431,6 +447,8 @@ BITS 32
 ;; Permanent Protected Mode
 ;; 32 Bit includes
     %include 'print32.inc'		; For printing
+    %include 'serial.inc'		; The steps on the serial port (K23)
+BITS 32
 ProtectedMode:
     ; Update segment registers
     xor eax, eax
@@ -440,6 +458,8 @@ ProtectedMode:
     mov fs, ax
     mov gs, ax
     mov ss, ax
+    mov esi, sMarkModeSet
+    call SerialMark32
 
     mov esp, 0x7BFF	
 		; set the stack top to the 0x7BFF
@@ -491,6 +511,8 @@ ProtectedMode:
 	push BootHeader
 	call prepare_long_mode          ; returns the PML4 address in EAX
 	add esp, 8
+	mov esi, sMarkJump
+	call SerialMark32               ; changes no register: EAX is kept
 	jmp EnterLongMode               ; does not return
 
 .Kernel32:
@@ -531,6 +553,17 @@ sRamdiskFailed db 'Ramdisk load failed, continuing without one', 0x0D, 0x0A, 0  
 										; In that case, change the name to 11 characters long, 8 for name and 3 for extension,
 										; separated by the dot (.)
 sKernelLoadingFailureSentence db 'Failure in loading kernel', 0
+
+;; The loader's steps on the serial port (K23, serial.inc).
+sMarkStarted      db '[stage2] started', 0
+sMarkVesa         db '[stage2] memory map, A20 and GDT done; choosing a screen mode', 0
+sMarkVesaDone     db '[stage2] screen mode chosen; reading the kernel', 0
+sMarkKernelRead   db '[stage2] kernel read', 0
+sMarkKernelLoaded db '[stage2] kernel loaded (ELF)', 0
+sMarkRamdisk      db '[stage2] ramdisk done', 0
+sMarkMode         db '[stage2] setting the screen mode', 0
+sMarkModeSet      db '[stage2] screen mode set', 0
+sMarkJump         db '[stage2] page tables built; to the kernel', 0
 sKernelELFReadingLoadingFailedSentence db 'Failure in reading and loading kernel elf file.', 0
 
 ;times (300*1023 - ($ - $$)) db 0

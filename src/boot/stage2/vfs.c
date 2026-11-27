@@ -30,29 +30,15 @@ void init_vfs() {
 
     if(vfs_ops.mount() == 0) {
         boot_print("[VFS] Successfully Mounted\n");
-        // vfs_ops.list("/");
     } else {
         boot_print("[VFS] Failed to Mount\n");
     }
-    vfs_node_t *file = vfs_ops.open("SAAMPLE/RANDOM.TXT");
-    if (file)
-    {
-        char buffer[512]; // Buffer to store file data
-        int bytes = vfs_ops.read(file, buffer, sizeof(buffer), 0);
-        if (bytes > 0)
-        {
-            boot_print("Read successful!\n");
-            buffer[bytes] = '\0'; // Null-terminate for text files
-            boot_print(buffer);
-        }
-        else
-        {
-            boot_print("Read failed!\n");
-        }
-    }
-
-    // List all the directory and files of KERNEL directory.
-    vfs_ops.list("KERNEL");
+    /* Here, until K23, every boot also opened SAAMPLE/RANDOM.TXT - a test
+     * of the early reader, misspelled, never on the disc - and listed the
+     * KERNEL directory on the screen. Under KVM every byte written to the
+     * VGA text screen, and every scroll of it, is a trip out of the virtual
+     * machine: the screen's chatter was most of the loader's second
+     * (K23, journal entry NNN). */
 }
 
 int load_kernel(const char* kernel_name)

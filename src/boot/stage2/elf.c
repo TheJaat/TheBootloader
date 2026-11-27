@@ -143,7 +143,6 @@ int load_elf32()
 			return 0;
 		}
 
-		boot_print("[load_elf32], Loading a Phdr.\n");
 
 		unsigned char *src = (unsigned char *)KERNEL_ELF_READ + phdr->p_offset;
 		unsigned char *dst = (unsigned char *)Dest;

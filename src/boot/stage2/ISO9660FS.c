@@ -48,9 +48,6 @@ int iso9660_mount()
     if (memcmp(pvd->id, "CD001", 5) == 0)
     {
         // Valid ISO9660 FS
-        boot_print("[ISO9660-FS] Mount:: Root Directory Start Sector = ");
-        boot_print_hex(((iso_9660_directory_entry_t *)pvd->root)->extent_start_LSB);
-        boot_print("\n");
     }
     else
     {
@@ -82,9 +79,8 @@ int iso9660_mount()
 // Returns a pointer to a newly allocated vfs_node_t if found,
 // or NULL if not found.
 vfs_node_t* iso9660_find_in_directory(unsigned int sector, unsigned int size, const char* name) {
-    boot_print("[ISO9660-FS] Searching for entry: ");
-    boot_print(name);
-    boot_print("\n");
+    /* Quiet while it looks: a line per entry passed was most of a KVM
+     * boot's loader time (K23). Its refusals still say why. */
     
     unsigned int current_sector = sector;
     unsigned int remaining_bytes = size;
@@ -126,15 +122,9 @@ vfs_node_t* iso9660_find_in_directory(unsigned int sector, unsigned int size, co
                 *s = '\0';
             }
             
-            boot_print("[ISO9660-FS] Found entry: ");
-            boot_print(file_name);
-            boot_print("\n");
             
             // Compare the entry name with the requested name.
             if (strcmp(file_name, name) == 0) {
-                boot_print("[ISO9660-FS] Entry matched: ");
-                boot_print(file_name);
-                boot_print("\n");
                 
                 // Allocate and populate a new vfs_node_t for the found entry.
                 vfs_node_t* node = (vfs_node_t*) stage2_malloc(sizeof(vfs_node_t));
@@ -166,9 +156,6 @@ vfs_node_t* iso9660_find_in_directory(unsigned int sector, unsigned int size, co
 // Main function: Opens a file or directory by path.
 // Supports paths with multiple components (e.g., "/DIR/SUBDIR/FILE.TXT").
 vfs_node_t* iso9660_open(const char* path) {
-    boot_print("[ISO9660-FS] iso9660_open: path = ");
-    boot_print(path);
-    boot_print("\n");
     
     // Start with the root directory information.
     // (Assume iso_fs has been populated during mount.)
@@ -242,7 +229,6 @@ vfs_node_t* iso9660_open(const char* path) {
 int iso9660_read(vfs_node_t* node, void* buffer, unsigned int size, unsigned int offset) {
     if (!node || !buffer) return -1; // Invalid input
 
-    boot_print("[ISO9660-FS] iso9660_read\n");
 
     // Ensure offset is within file bounds
     if (offset >= node->size) return 0;
