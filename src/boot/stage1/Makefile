@@ -26,13 +26,24 @@ $(STAGE1_DIR):
 	@echo "$(CYAN)Creating stage1 directory...$(RESET)"
 	mkdir -p $(STAGE1_DIR)
 
+# Each object depends on the files it includes, not only on its source:
+# nasm -MD writes them, as it builds, to a .d file beside the
+# object, read back below (-MP: a phony target per included file, so a
+# file removed later does not stop the build). Without them an edited
+# .inc was not assembled again: the night tree's k130-any-size linked a
+# stage2.o made before datastructure.inc said `global BootHeader`
+# (TheTaaJ journal entry 148).
+
 # Rule to build each binary
 $(STAGE1_DIR)/%.bin: $(SRC_DIR)/%.asm | $(STAGE1_DIR) 
 	@echo "$(GREEN)Assembling $< to $@...$(RESET)"
 	$(ASM) $(STAGE1_ASFLAGS) -I $(ROOT_DIR)/$(BOOT_STAGE1_INCLUDE) \
             -Lm -Ls -l $(STAGE1_DIR)/$(notdir $(<:.asm=.lst)) \
             -dARCH=$(ARCH) \
+            -MD $(@:.bin=.d) -MP \
             -I $(ROOT_DIR)/$(BOOT_COMMON_INCLUDE) $< -o $@
+
+-include $(BIN:.bin=.d)
 
 # Target to clean the output
 clean:
